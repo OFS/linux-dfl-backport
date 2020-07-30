@@ -273,13 +273,11 @@ static int m10bmc_hwmon_read(struct device *dev, enum hwmon_sensor_types type,
 			break;
 		case hwmon_temp_max_hyst:
 			reg_hyst = data->reg_hyst;
-			fallthrough;
 		case hwmon_temp_max:
 			reg = data->reg_max;
 			break;
 		case hwmon_temp_crit_hyst:
 			reg_hyst = data->reg_hyst;
-			fallthrough;
 		case hwmon_temp_crit:
 			reg = data->reg_crit;
 			break;
