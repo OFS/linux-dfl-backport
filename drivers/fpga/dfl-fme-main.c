@@ -732,16 +732,20 @@ static int fme_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#if RHEL_RELEASE_CODE >= 0x803
 static const struct attribute_group *fme_dev_groups[] = {
 	&fme_hdr_group,
 	&fme_global_err_group,
 	NULL
 };
+#endif
 
 static struct platform_driver fme_driver = {
 	.driver	= {
 		.name       = DFL_FPGA_FEATURE_DEV_FME,
+#if RHEL_RELEASE_CODE >= 0x803
 		.dev_groups = fme_dev_groups,
+#endif
 	},
 	.probe   = fme_probe,
 	.remove  = fme_remove,

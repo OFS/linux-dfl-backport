@@ -370,7 +370,11 @@ static struct attribute *port_hdr_attrs[] = {
 	&dev_attr_userclk_freqcntrsts.attr,
 	NULL,
 };
+#if RHEL_RELEASE_CODE < 0x803
+ATTRIBUTE_GROUPS(port_hdr);
+#endif
 
+#if RHEL_RELEASE_CODE >= 0x803
 static umode_t port_hdr_attrs_visible(struct kobject *kobj,
 				      struct attribute *attr, int n)
 {
@@ -400,14 +404,28 @@ static const struct attribute_group port_hdr_group = {
 	.attrs      = port_hdr_attrs,
 	.is_visible = port_hdr_attrs_visible,
 };
+#endif
 
 static int port_hdr_init(struct platform_device *pdev,
 			 struct dfl_feature *feature)
 {
+	int ret = 0;
+
 	port_reset(pdev);
 
-	return 0;
+#if RHEL_RELEASE_CODE < 0x803
+	ret = device_add_groups(&pdev->dev, port_hdr_groups);
+#endif
+	return ret;
 }
+
+#if RHEL_RELEASE_CODE < 0x803
+static void port_hdr_uinit(struct platform_device *pdev,
+			   struct dfl_feature *feature)
+{
+	device_remove_groups(&pdev->dev, port_hdr_groups);
+}
+#endif
 
 static long
 port_hdr_ioctl(struct platform_device *pdev, struct dfl_feature *feature,
@@ -437,6 +455,9 @@ static const struct dfl_feature_id port_hdr_id_table[] = {
 
 static const struct dfl_feature_ops port_hdr_ops = {
 	.init = port_hdr_init,
+#if RHEL_RELEASE_CODE < 0x803
+	.uinit = port_hdr_uinit,
+#endif
 	.ioctl = port_hdr_ioctl,
 };
 
@@ -467,6 +488,9 @@ static struct attribute *port_afu_attrs[] = {
 	&dev_attr_afu_id.attr,
 	NULL
 };
+#if RHEL_RELEASE_CODE < 0x803
+ATTRIBUTE_GROUPS(port_afu);
+#else
 
 static umode_t port_afu_attrs_visible(struct kobject *kobj,
 				      struct attribute *attr, int n)
@@ -487,18 +511,37 @@ static const struct attribute_group port_afu_group = {
 	.attrs      = port_afu_attrs,
 	.is_visible = port_afu_attrs_visible,
 };
+#endif
 
 static int port_afu_init(struct platform_device *pdev,
 			 struct dfl_feature *feature)
 {
 	struct resource *res = &pdev->resource[feature->resource_index];
+	int ret;
 
-	return afu_mmio_region_add(dev_get_platdata(&pdev->dev),
+	ret = afu_mmio_region_add(dev_get_platdata(&pdev->dev),
 				   DFL_PORT_REGION_INDEX_AFU,
 				   resource_size(res), res->start,
 				   DFL_PORT_REGION_MMAP | DFL_PORT_REGION_READ |
 				   DFL_PORT_REGION_WRITE);
+	if (ret)
+		return ret;
+
+#if RHEL_RELEASE_CODE < 0x803
+	ret = device_add_groups(&pdev->dev, port_afu_groups);
+#endif
+	return ret;
 }
+
+#if RHEL_RELEASE_CODE < 0x803
+static void port_afu_uinit(struct platform_device *pdev,
+			   struct dfl_feature *feature)
+{
+	dev_dbg(&pdev->dev, "PORT AFU UInit.\n");
+
+	device_remove_groups(&pdev->dev, port_afu_groups);
+}
+#endif
 
 static const struct dfl_feature_id port_afu_id_table[] = {
 	{.id = PORT_FEATURE_ID_AFU,},
@@ -507,6 +550,9 @@ static const struct dfl_feature_id port_afu_id_table[] = {
 
 static const struct dfl_feature_ops port_afu_ops = {
 	.init = port_afu_init,
+#if RHEL_RELEASE_CODE < 0x803
+	.uinit = port_afu_uinit,
+#endif
 };
 
 static int port_stp_init(struct platform_device *pdev,
@@ -932,17 +978,21 @@ static int afu_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#if RHEL_RELEASE_CODE >= 0x803
 static const struct attribute_group *afu_dev_groups[] = {
 	&port_hdr_group,
 	&port_afu_group,
 	&port_err_group,
 	NULL
 };
+#endif
 
 static struct platform_driver afu_driver = {
 	.driver	= {
 		.name	    = DFL_FPGA_FEATURE_DEV_PORT,
+#if RHEL_RELEASE_CODE >= 0x803
 		.dev_groups = afu_dev_groups,
+#endif
 	},
 	.probe   = afu_probe,
 	.remove  = afu_remove,

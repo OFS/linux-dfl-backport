@@ -474,7 +474,9 @@ static const struct dfl_device_id dfl_n3000_nios_ids[] = {
 static struct dfl_driver dfl_n3000_nios_driver = {
 	.drv	= {
 		.name       = "dfl-n3000-nios",
+#if RHEL_RELEASE_CODE >= 0x803
 		.dev_groups = n3000_nios_groups,
+#endif
 	},
 	.id_table = dfl_n3000_nios_ids,
 	.probe   = dfl_n3000_nios_probe,

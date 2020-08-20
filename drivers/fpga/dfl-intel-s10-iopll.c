@@ -499,6 +499,7 @@ static int dfl_intel_s10_iopll_probe(struct dfl_device *dfl_dev)
 	struct device *dev = &dfl_dev->dev;
 	struct dfl_iopll *iopll;
 	void __iomem *csr_base;
+	int ret = 0;
 
 	csr_base = devm_ioremap_resource(dev, &dfl_dev->mmio_res);
 	if (IS_ERR(csr_base)) {
@@ -515,7 +516,10 @@ static int dfl_intel_s10_iopll_probe(struct dfl_device *dfl_dev)
 	mutex_init(&iopll->iopll_mutex);
 	dev_set_drvdata(dev, iopll);
 
-	return 0;
+#if RHEL_RELEASE_CODE < 0x803
+	ret = device_add_groups(dev, iopll_attr_groups);
+#endif
+	return ret;
 }
 
 static int dfl_intel_s10_iopll_remove(struct dfl_device *dfl_dev)
@@ -536,7 +540,9 @@ static const struct dfl_device_id dfl_intel_s10_iopll_ids[] = {
 static struct dfl_driver dfl_intel_s10_iopll_driver = {
 	.drv = {
 		.name = "intel-dfl-iopll",
+#if RHEL_RELEASE_CODE > 0x803
 		.dev_groups = iopll_attr_groups,
+#endif
 	},
 	.id_table = dfl_intel_s10_iopll_ids,
 	.probe = dfl_intel_s10_iopll_probe,

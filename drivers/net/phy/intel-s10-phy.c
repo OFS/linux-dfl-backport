@@ -11,6 +11,7 @@
 #include <linux/module.h>
 #include <linux/phy/intel-s10-phy.h>
 #include <linux/platform_device.h>
+#include <linux/version.h>
 
 /* HSSI QSFP Control & Status Registers */
 #define HSSI_QSFP_RCFG_CMD(phy)		((phy)->phy_offset + 0x0)
@@ -493,6 +494,7 @@ static struct attribute_group qsfp_attr_group = {
 	.attrs = qsfp_attrs,
 };
 
+#if RHEL_RELEASE_CODE > 0x803
 static const struct attribute_group *qsfp_attr_groups[] = {
 	&qsfp_attr_group,
 	&chan0_attr_group,
@@ -501,6 +503,7 @@ static const struct attribute_group *qsfp_attr_groups[] = {
 	&chan3_attr_group,
 	NULL,
 };
+#endif
 
 static int intel_s10_phy_probe(struct platform_device *pdev)
 {
@@ -536,7 +539,9 @@ static int intel_s10_phy_remove(struct platform_device *pdev)
 static struct platform_driver intel_s10_phy_driver = {
 	.driver = {
 		.name = INTEL_S10_PHY_DRV_NAME,
+#if RHEL_RELEASE_CODE > 0x803
 		.dev_groups = qsfp_attr_groups,
+#endif
 	},
 	.probe = intel_s10_phy_probe,
 	.remove = intel_s10_phy_remove,

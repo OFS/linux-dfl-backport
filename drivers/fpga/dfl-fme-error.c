@@ -326,6 +326,10 @@ const struct attribute_group fme_global_err_group = {
 	.is_visible = fme_global_err_attrs_visible,
 };
 
+#if RHEL_RELEASE_CODE < 0x803
+__ATTRIBUTE_GROUPS(fme_global_err);
+#endif
+
 static void fme_err_mask(struct device *dev, bool mask)
 {
 	struct dfl_feature_platform_data *pdata = dev_get_platdata(dev);
@@ -352,15 +356,23 @@ static void fme_err_mask(struct device *dev, bool mask)
 static int fme_global_err_init(struct platform_device *pdev,
 			       struct dfl_feature *feature)
 {
+	int ret = 0;
+
 	fme_err_mask(&pdev->dev, false);
 
-	return 0;
+#if RHEL_RELEASE_CODE < 0x803
+	ret = device_add_groups(&pdev->dev, fme_global_err_groups);
+#endif
+	return ret;
 }
 
 static void fme_global_err_uinit(struct platform_device *pdev,
 				 struct dfl_feature *feature)
 {
 	fme_err_mask(&pdev->dev, true);
+#if RHEL_RELEASE_CODE < 0x803
+	device_remove_groups(&pdev->dev, fme_global_err_groups);
+#endif
 }
 
 static long

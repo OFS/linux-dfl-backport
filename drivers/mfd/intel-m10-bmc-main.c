@@ -12,6 +12,7 @@
 #include <linux/mfd/core.h>
 #include <linux/init.h>
 #include <linux/spi/spi.h>
+#include <linux/version.h>
 #include <linux/mfd/intel-m10-bmc.h>
 
 #include "intel-spi-avmm.h"
@@ -228,14 +229,20 @@ static struct attribute *m10bmc_attrs[] = {
 	NULL,
 };
 
+#if RHEL_RELEASE_CODE >= 0x803
 static struct attribute_group m10bmc_attr_group = {
 	.attrs = m10bmc_attrs,
 };
+#else
+ATTRIBUTE_GROUPS(m10bmc);
+#endif
 
+#if RHEL_RELEASE_CODE >= 0x803
 static const struct attribute_group *m10bmc_dev_groups[] = {
 	&m10bmc_attr_group,
 	NULL
 };
+#endif
 
 static int check_m10bmc_version(struct intel_m10bmc *m10bmc)
 {
@@ -320,6 +327,9 @@ static int intel_m10_bmc_spi_probe(struct spi_device *spi)
 	if (ret)
 		dev_err(dev, "Failed to register sub-devices: %d\n", ret);
 
+#if RHEL_RELEASE_CODE < 0x803
+	ret = device_add_groups(dev, m10bmc_groups);
+#endif
 	return ret;
 }
 
@@ -333,7 +343,9 @@ MODULE_DEVICE_TABLE(spi, m10bmc_spi_id);
 static struct spi_driver intel_m10bmc_spi_driver = {
 	.driver = {
 		.name = "intel-m10-bmc",
+#if RHEL_RELEASE_CODE >= 0x803
 		.dev_groups = m10bmc_dev_groups,
+#endif
 	},
 	.probe = intel_m10_bmc_spi_probe,
 	.id_table = m10bmc_spi_id,
