@@ -12,6 +12,7 @@
 #include <linux/of_platform.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
+#include <linux/version.h>
 
 static DEFINE_IDA(fpga_bridge_ida);
 static struct class *fpga_bridge_class;
@@ -83,7 +84,7 @@ err_dev:
 	put_device(dev);
 	return ERR_PTR(ret);
 }
-
+#if RHEL_RELEASE_CODE >= 0x803
 /**
  * of_fpga_bridge_get - get an exclusive reference to a fpga bridge
  *
@@ -106,7 +107,7 @@ struct fpga_bridge *of_fpga_bridge_get(struct device_node *np,
 	return __fpga_bridge_get(dev, info);
 }
 EXPORT_SYMBOL_GPL(of_fpga_bridge_get);
-
+#endif
 static int fpga_bridge_dev_match(struct device *dev, const void *data)
 {
 	return dev->parent == data;
@@ -220,7 +221,7 @@ void fpga_bridges_put(struct list_head *bridge_list)
 	}
 }
 EXPORT_SYMBOL_GPL(fpga_bridges_put);
-
+#if RHEL_RELEASE_CODE >= 0x803
 /**
  * of_fpga_bridge_get_to_list - get a bridge, add it to a list
  *
@@ -250,7 +251,7 @@ int of_fpga_bridge_get_to_list(struct device_node *np,
 	return 0;
 }
 EXPORT_SYMBOL_GPL(of_fpga_bridge_get_to_list);
-
+#endif
 /**
  * fpga_bridge_get_to_list - given device, get a bridge, add it to a list
  *

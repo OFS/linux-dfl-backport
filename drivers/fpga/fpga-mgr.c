@@ -17,6 +17,7 @@
 #include <linux/slab.h>
 #include <linux/scatterlist.h>
 #include <linux/highmem.h>
+#include <linux/version.h>
 
 static DEFINE_IDA(fpga_mgr_ida);
 static struct class *fpga_mgr_class;
@@ -482,6 +483,7 @@ struct fpga_manager *fpga_mgr_get(struct device *dev)
 }
 EXPORT_SYMBOL_GPL(fpga_mgr_get);
 
+#if RHEL_RELEASE_CODE >= 0x803
 /**
  * of_fpga_mgr_get - Given a device node, get a reference to a fpga mgr.
  *
@@ -500,7 +502,7 @@ struct fpga_manager *of_fpga_mgr_get(struct device_node *node)
 	return __fpga_mgr_get(dev);
 }
 EXPORT_SYMBOL_GPL(of_fpga_mgr_get);
-
+#endif
 /**
  * fpga_mgr_put - release a reference to a fpga manager
  * @mgr:	fpga manager structure
