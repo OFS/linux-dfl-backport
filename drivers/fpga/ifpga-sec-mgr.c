@@ -14,6 +14,10 @@
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
 
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+
 static DEFINE_IDA(ifpga_sec_mgr_ida);
 static struct class *ifpga_sec_mgr_class;
 
