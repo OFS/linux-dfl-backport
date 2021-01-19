@@ -13,6 +13,7 @@
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
+#include <linux/version.h>
 
 struct m10bmc_sec {
 	struct device *dev;
@@ -760,6 +761,7 @@ static int m10bmc_secure_probe(struct platform_device *pdev)
 	struct fpga_sec_mgr_ops *sops;
 	struct fpga_sec_mgr *smgr;
 	struct m10bmc_sec *sec;
+	int ret;
 
 	sec = devm_kzalloc(&pdev->dev, sizeof(*sec), GFP_KERNEL);
 	if (!sec)
@@ -780,7 +782,15 @@ static int m10bmc_secure_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	return devm_fpga_sec_mgr_register(sec->dev, smgr);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+	ret = device_add_groups(sec->dev, m10bmc_sec_attr_groups);
+	if (ret)
+		return ret;
+#endif
+
+	ret = devm_fpga_sec_mgr_register(sec->dev, smgr);
+
+	return ret;
 }
 
 static const struct platform_device_id intel_m10bmc_secure_ids[] = {
@@ -799,7 +809,9 @@ static struct platform_driver intel_m10bmc_secure_driver = {
 	.probe = m10bmc_secure_probe,
 	.driver = {
 		.name = "intel-m10bmc-secure",
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
 		.dev_groups = m10bmc_sec_attr_groups,
+#endif
 	},
 	.id_table = intel_m10bmc_secure_ids,
 };
