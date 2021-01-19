@@ -13,8 +13,25 @@
 #include <linux/sched/signal.h>
 #include <linux/uaccess.h>
 #include <linux/mm.h>
+#include <linux/version.h>
 
 #include "dfl-afu.h"
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 6, 0)
+
+#define pin_user_pages_fast get_user_pages_fast
+#define unpin_user_pages put_all_pages
+
+static void put_all_pages(struct page **pages, int npages)
+{
+	int i;
+
+	for (i = 0; i < npages; i++)
+		if (pages[i])
+			put_page(pages[i]);
+}
+
+#endif /* < KERNEL_VERSION(5, 6, 0) */
 
 void afu_dma_region_init(struct dfl_feature_platform_data *pdata)
 {
