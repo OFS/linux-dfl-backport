@@ -12,6 +12,7 @@
 #include <linux/regmap.h>
 #include <linux/slab.h>
 #include <linux/device.h>
+#include <linux/iopoll.h>
 
 #ifdef CONFIG_DEBUG_FS
 
