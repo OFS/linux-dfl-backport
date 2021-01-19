@@ -37,6 +37,7 @@ obj-m += intel-m10-bmc.o
 obj-m += intel-m10-bmc-hwmon.o
 obj-m += intel-m10-bmc-secure.o
 obj-m += n5010-phy.o
+obj-m += n5010-hssi.o
 obj-m += dfl-pci.o
 
 regmap-spi-avmm-y := drivers/base/regmap/regmap-spi-avmm.o
@@ -69,6 +70,7 @@ intel-m10-bmc-y := drivers/mfd/intel-m10-bmc.o
 intel-m10-bmc-hwmon-y := drivers/hwmon/intel-m10-bmc-hwmon.o
 intel-m10-bmc-secure-y := drivers/fpga/intel-m10-bmc-secure.o
 n5010-phy-y := drivers/net/ethernet/silicom/n5010-phy.o
+n5010-hssi-y := drivers/net/ethernet/silicom/n5010-hssi.o
 
 # intermediates used when reversing modules list
 count := $(words $(obj-m))
