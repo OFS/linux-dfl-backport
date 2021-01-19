@@ -18,6 +18,7 @@
 #include <linux/module.h>
 #include <linux/uaccess.h>
 #include <linux/fpga-dfl.h>
+#include <linux/version.h>
 
 #include "dfl-afu.h"
 
@@ -413,14 +414,29 @@ static const struct attribute_group port_hdr_group = {
 	.attrs      = port_hdr_attrs,
 	.is_visible = port_hdr_attrs_visible,
 };
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+__ATTRIBUTE_GROUPS(port_hdr);
+#endif
 
 static int port_hdr_init(struct platform_device *pdev,
 			 struct dfl_feature *feature)
 {
 	port_reset(pdev);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+	return device_add_groups(&pdev->dev, port_hdr_groups);
+#else
 	return 0;
+#endif
 }
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+static void port_hdr_uinit(struct platform_device *pdev,
+			   struct dfl_feature *feature)
+{
+	device_remove_groups(&pdev->dev, port_hdr_groups);
+}
+#endif
 
 static long
 port_hdr_ioctl(struct platform_device *pdev, struct dfl_feature *feature,
@@ -450,6 +466,9 @@ static const struct dfl_feature_id port_hdr_id_table[] = {
 
 static const struct dfl_feature_ops port_hdr_ops = {
 	.init = port_hdr_init,
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+	.uinit = port_hdr_uinit,
+#endif
 	.ioctl = port_hdr_ioctl,
 };
 
@@ -500,18 +519,43 @@ static const struct attribute_group port_afu_group = {
 	.attrs      = port_afu_attrs,
 	.is_visible = port_afu_attrs_visible,
 };
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+__ATTRIBUTE_GROUPS(port_afu);
+#endif
 
 static int port_afu_init(struct platform_device *pdev,
 			 struct dfl_feature *feature)
 {
 	struct resource *res = &pdev->resource[feature->resource_index];
+	int ret;
 
-	return afu_mmio_region_add(dev_get_platdata(&pdev->dev),
-				   DFL_PORT_REGION_INDEX_AFU,
-				   resource_size(res), res->start,
-				   DFL_PORT_REGION_MMAP | DFL_PORT_REGION_READ |
-				   DFL_PORT_REGION_WRITE);
+	ret = afu_mmio_region_add(dev_get_platdata(&pdev->dev),
+				  DFL_PORT_REGION_INDEX_AFU,
+				  resource_size(res), res->start,
+				  DFL_PORT_REGION_MMAP | DFL_PORT_REGION_READ |
+				  DFL_PORT_REGION_WRITE);
+	if (ret)
+		return ret;
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+	ret = device_add_groups(&pdev->dev, port_afu_groups);
+	if (ret)
+		return ret;
+
+	ret = device_add_groups(&pdev->dev, port_err_groups);
+#endif
+
+	return ret;
 }
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+static void port_afu_uinit(struct platform_device *pdev,
+			   struct dfl_feature *feature)
+{
+	device_remove_groups(&pdev->dev, port_err_groups);
+	device_remove_groups(&pdev->dev, port_afu_groups);
+}
+#endif
 
 static const struct dfl_feature_id port_afu_id_table[] = {
 	{.id = PORT_FEATURE_ID_AFU,},
@@ -520,6 +564,9 @@ static const struct dfl_feature_id port_afu_id_table[] = {
 
 static const struct dfl_feature_ops port_afu_ops = {
 	.init = port_afu_init,
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+	.uinit = port_afu_uinit,
+#endif
 };
 
 static int port_stp_init(struct platform_device *pdev,
@@ -945,17 +992,21 @@ static int afu_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
 static const struct attribute_group *afu_dev_groups[] = {
 	&port_hdr_group,
 	&port_afu_group,
 	&port_err_group,
 	NULL
 };
+#endif
 
 static struct platform_driver afu_driver = {
 	.driver	= {
 		.name	    = DFL_FPGA_FEATURE_DEV_PORT,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
 		.dev_groups = afu_dev_groups,
+#endif
 	},
 	.probe   = afu_probe,
 	.remove  = afu_remove,
