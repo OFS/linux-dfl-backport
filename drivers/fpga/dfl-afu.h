@@ -108,7 +108,7 @@ afu_dma_region_find(struct dfl_feature_platform_data *pdata,
 extern const struct dfl_feature_ops port_err_ops;
 extern const struct dfl_feature_id port_err_id_table[];
 extern const struct attribute_group port_err_group;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
 extern const struct attribute_group *port_err_groups[];
 #endif
 
