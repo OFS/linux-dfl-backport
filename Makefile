@@ -2,6 +2,17 @@ KERNELDIR ?= /lib/modules/$(shell uname -r)/build
 
 LINUXINCLUDE := -I$(src)/include -I$(src)/include/uapi $(LINUXINCLUDE)
 
+RPMBUILDOPTS := -bb --build-in-place \
+                --define '_topdir /tmp/rpmbuild' \
+                --define '_rpmdir .' \
+                --define '_build_name_fmt %%{NAME}-%%{VERSION}-%%{RELEASE}.%%{ARCH}.rpm'
+
+ifeq ($(BACKPORT_VERSION),)
+BACKPORT_VERSION := $(shell git describe --always --tags --dirty --long | sed -E 's/^v//;s/([^-]*-g)/r\1/;s/-/./g;s/\.rc/rc/')
+endif
+
+export BACKPORT_VERSION
+
 # modules to build (in insmod order)
 obj-m += fpga-mgr.o
 obj-m += fpga-bridge.o
@@ -97,6 +108,10 @@ insmod: $(rules_insmod)
 # first rmmod, then insmod all modules
 reload: rmmod insmod
 
+# build rpm packages
+rpm: build/rpm/spec clean
+	@rpmbuild $(RPMBUILDOPTS) $<
+
 help:
 	@echo "Build Usage:"
 	@echo "	make all	Build kernel modules"
@@ -107,9 +122,12 @@ help:
 	@echo "	KERNEL		Kernel version to build against ($$(uname -r))"
 	@echo "	KERNELDIR	Path to kernel build dir (/lib/modules/<KERNEL>/build)"
 	@echo ""
+	@echo "Package Usage:"
+	@echo "	make rpm	Build rpm package from source"
+	@echo ""
 	@echo "Test Usage:"
 	@echo "	make rmmod	Remove modules from running kernel"
 	@echo "	make insmod	Insert modules to running kernel"
 	@echo "	make reload	Combination of 'make rmmod' and 'make insmod'"
 
-.PHONY: all install clean rmmod insmod reload help
+.PHONY: all install clean rmmod insmod reload rpm help
