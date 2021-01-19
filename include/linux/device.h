@@ -6,7 +6,7 @@
 #include <linux/version.h>
 #include_next <linux/device.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
 static inline int device_match_of_node(struct device *dev, const void *np)
 {
 	return dev->of_node == np;
