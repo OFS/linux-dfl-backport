@@ -229,6 +229,7 @@ static struct dfl_driver dfl_spi_altera_driver = {
 
 module_dfl_driver(dfl_spi_altera_driver);
 
+MODULE_ALIAS("dfl:00000000:000000000000000e");
 MODULE_DEVICE_TABLE(dfl, dfl_spi_altera_ids);
 MODULE_DESCRIPTION("DFL spi altera driver");
 MODULE_AUTHOR("Intel Corporation");
