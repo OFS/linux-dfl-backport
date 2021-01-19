@@ -516,7 +516,7 @@ static int dfl_intel_s10_iopll_probe(struct dfl_device *dfl_dev)
 	mutex_init(&iopll->iopll_mutex);
 	dev_set_drvdata(dev, iopll);
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
 	return device_add_groups(dev, iopll_attr_groups);
 #else
 	return 0;
@@ -541,7 +541,7 @@ static const struct dfl_device_id dfl_intel_s10_iopll_ids[] = {
 static struct dfl_driver dfl_intel_s10_iopll_driver = {
 	.drv = {
 		.name = "intel-dfl-iopll",
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= 0x803
 		.dev_groups = iopll_attr_groups,
 #endif
 	},
