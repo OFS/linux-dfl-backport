@@ -597,6 +597,7 @@ static struct dfl_driver n5010_hssi_driver = {
 };
 
 module_dfl_driver(n5010_hssi_driver);
+MODULE_ALIAS("dfl:00000000:000000000000001f");
 MODULE_DEVICE_TABLE(dfl, n5010_hssi_mac_ids);
 MODULE_DESCRIPTION("Network Device Driver for Silicom Lightning Creek");
 MODULE_AUTHOR("Esa Leskinen <ele@silicom.dk>");
