@@ -326,6 +326,10 @@ const struct attribute_group fme_global_err_group = {
 	.is_visible = fme_global_err_attrs_visible,
 };
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+__ATTRIBUTE_GROUPS(fme_global_err);
+#endif
+
 static void fme_err_mask(struct device *dev, bool mask)
 {
 	struct dfl_feature_platform_data *pdata = dev_get_platdata(dev);
@@ -354,13 +358,21 @@ static int fme_global_err_init(struct platform_device *pdev,
 {
 	fme_err_mask(&pdev->dev, false);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+	return device_add_groups(&pdev->dev, fme_global_err_groups);
+#else
 	return 0;
+#endif
 }
 
 static void fme_global_err_uinit(struct platform_device *pdev,
 				 struct dfl_feature *feature)
 {
 	fme_err_mask(&pdev->dev, true);
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+	device_remove_groups(&pdev->dev, fme_global_err_groups);
+#endif
 }
 
 static long

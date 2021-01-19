@@ -20,6 +20,7 @@
 #include <linux/module.h>
 #include <linux/uaccess.h>
 #include <linux/fpga-dfl.h>
+#include <linux/version.h>
 
 #include "dfl.h"
 #include "dfl-fme.h"
@@ -127,6 +128,21 @@ static struct attribute *fme_hdr_attrs[] = {
 static const struct attribute_group fme_hdr_group = {
 	.attrs = fme_hdr_attrs,
 };
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+__ATTRIBUTE_GROUPS(fme_hdr);
+
+static int fme_hdr_init(struct platform_device *pdev,
+			struct dfl_feature *feature)
+{
+	return device_add_groups(&pdev->dev, fme_hdr_groups);
+}
+
+static void fme_hdr_uinit(struct platform_device *pdev,
+			  struct dfl_feature *feature)
+{
+	device_remove_groups(&pdev->dev, fme_hdr_groups);
+}
+#endif
 
 static long fme_hdr_ioctl_release_port(struct dfl_feature_platform_data *pdata,
 				       unsigned long arg)
@@ -174,6 +190,10 @@ static const struct dfl_feature_id fme_hdr_id_table[] = {
 };
 
 static const struct dfl_feature_ops fme_hdr_ops = {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+	.init = fme_hdr_init,
+	.uinit = fme_hdr_uinit,
+#endif
 	.ioctl = fme_hdr_ioctl,
 };
 
@@ -732,16 +752,20 @@ static int fme_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
 static const struct attribute_group *fme_dev_groups[] = {
 	&fme_hdr_group,
 	&fme_global_err_group,
 	NULL
 };
+#endif
 
 static struct platform_driver fme_driver = {
 	.driver	= {
 		.name       = DFL_FPGA_FEATURE_DEV_FME,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
 		.dev_groups = fme_dev_groups,
+#endif
 	},
 	.probe   = fme_probe,
 	.remove  = fme_remove,
