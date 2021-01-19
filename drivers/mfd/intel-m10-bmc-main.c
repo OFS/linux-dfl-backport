@@ -337,7 +337,7 @@ static int intel_m10_bmc_spi_probe(struct spi_device *spi)
 	if (ret)
 		dev_err(dev, "Failed to register sub-devices: %d\n", ret);
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
 	ret = device_add_groups(dev, m10bmc_dev_groups);
 #endif
 
@@ -355,7 +355,7 @@ MODULE_DEVICE_TABLE(spi, m10bmc_spi_id);
 static struct spi_driver intel_m10bmc_spi_driver = {
 	.driver = {
 		.name = "intel-m10-bmc",
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= 0x803
 		.dev_groups = m10bmc_dev_groups,
 #endif
 	},
