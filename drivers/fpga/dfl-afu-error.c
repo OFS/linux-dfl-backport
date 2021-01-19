@@ -16,6 +16,7 @@
 
 #include <linux/fpga-dfl.h>
 #include <linux/uaccess.h>
+#include <linux/version.h>
 
 #include "dfl-afu.h"
 
@@ -221,6 +222,12 @@ const struct attribute_group port_err_group = {
 	.attrs      = port_err_attrs,
 	.is_visible = port_err_attrs_visible,
 };
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+const struct attribute_group *port_err_groups[] = {
+	&port_err_group,
+	NULL,
+};
+#endif
 
 static int port_err_init(struct platform_device *pdev,
 			 struct dfl_feature *feature)
