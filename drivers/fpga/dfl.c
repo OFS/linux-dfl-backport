@@ -14,6 +14,7 @@
 #include <linux/fpga/dfl-bus.h>
 #include <linux/module.h>
 #include <linux/uaccess.h>
+#include <linux/version.h>
 
 #include "dfl.h"
 
@@ -1695,6 +1696,7 @@ int dfl_fpga_cdev_assign_port(struct dfl_fpga_cdev *cdev, int port_id)
 		goto put_dev_exit;
 	}
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 5, 0)
 	/*
 	 * HACK: See the commit message associated with the
 	 * INIT_LIST_HEAD() line below. The long term fix
@@ -1702,6 +1704,7 @@ int dfl_fpga_cdev_assign_port(struct dfl_fpga_cdev *cdev, int port_id)
 	 * reviving the existing device structure.
 	 */
 	INIT_LIST_HEAD(&(&port_pdev->dev)->links.needs_suppliers);
+#endif
 	ret = platform_device_add(port_pdev);
 	if (ret)
 		goto put_dev_exit;
