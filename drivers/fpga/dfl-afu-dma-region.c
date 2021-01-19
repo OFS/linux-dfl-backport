@@ -40,6 +40,100 @@ void afu_dma_region_init(struct dfl_feature_platform_data *pdata)
 	afu->dma_regions = RB_ROOT;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 3, 0)
+static long afu_dma_adjust_locked_vm(struct device *dev, long npages, bool incr)
+{
+	unsigned long locked, lock_limit;
+	int ret = 0;
+
+	/* the task is exiting. */
+	if (!current->mm)
+		return 0;
+
+	down_write(&current->mm->mmap_sem);
+
+	if (incr) {
+		locked = current->mm->locked_vm + npages;
+		lock_limit = rlimit(RLIMIT_MEMLOCK) >> PAGE_SHIFT;
+
+		if (locked > lock_limit && !capable(CAP_IPC_LOCK))
+			ret = -ENOMEM;
+		else
+			current->mm->locked_vm += npages;
+	} else {
+
+		if (WARN_ON_ONCE(npages > current->mm->locked_vm))
+			npages = current->mm->locked_vm;
+		current->mm->locked_vm -= npages;
+	}
+
+	dev_dbg(dev, "[%d] RLIMIT_MEMLOCK %c%ld %ld/%ld%s\n", current->pid,
+				incr ? '+' : '-',
+				npages << PAGE_SHIFT,
+				current->mm->locked_vm << PAGE_SHIFT,
+				rlimit(RLIMIT_MEMLOCK),
+				ret ? "- execeeded" : "");
+
+	up_write(&current->mm->mmap_sem);
+
+	return ret;
+}
+
+static long afu_dma_pin_pages(struct dfl_feature_platform_data *pdata,
+			      struct dfl_afu_dma_region *region)
+{
+	long npages = region->length >> PAGE_SHIFT;
+	struct device *dev = &pdata->dev->dev;
+	long ret, pinned;
+
+	ret = afu_dma_adjust_locked_vm(dev, npages, true);
+	if (ret)
+		return ret;
+
+	region->pages = kcalloc(npages, sizeof(struct page *), GFP_KERNEL);
+	if (!region->pages) {
+		afu_dma_adjust_locked_vm(dev, npages, false);
+		return -ENOMEM;
+	}
+
+	pinned = get_user_pages_fast(region->user_addr, npages,
+				     (region->direction != DMA_TO_DEVICE),
+				     region->pages);
+	if (pinned < 0) {
+		ret = pinned;
+		goto err_put_pages;
+	} else if (pinned != npages) {
+		ret = -EFAULT;
+		goto err;
+	}
+
+	dev_dbg(dev, "%ld pages pinned\n", pinned);
+
+	return 0;
+
+err_put_pages:
+	put_all_pages(region->pages, pinned);
+err:
+	kfree(region->pages);
+	afu_dma_adjust_locked_vm(dev, npages, false);
+	return ret;
+}
+
+static void afu_dma_unpin_pages(struct dfl_feature_platform_data *pdata,
+				struct dfl_afu_dma_region *region)
+{
+	long npages = region->length >> PAGE_SHIFT;
+	struct device *dev = &pdata->dev->dev;
+
+	put_all_pages(region->pages, npages);
+	kfree(region->pages);
+	afu_dma_adjust_locked_vm(dev, npages, false);
+
+	dev_dbg(dev, "%ld pages unpinned\n", npages);
+}
+
+#else /* < KERNEL_VERSION(5, 3, 0) */
+
 /**
  * afu_dma_pin_pages - pin pages of given dma memory region
  * @pdata: feature device platform data
@@ -112,6 +206,8 @@ static void afu_dma_unpin_pages(struct dfl_feature_platform_data *pdata,
 
 	dev_dbg(dev, "%ld pages unpinned\n", npages);
 }
+
+#endif /* < KERNEL_VERSION(5, 3, 0) */
 
 /**
  * afu_dma_check_continuous_pages - check if pages are continuous
