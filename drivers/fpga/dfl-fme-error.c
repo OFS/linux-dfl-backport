@@ -326,7 +326,7 @@ const struct attribute_group fme_global_err_group = {
 	.is_visible = fme_global_err_attrs_visible,
 };
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
 __ATTRIBUTE_GROUPS(fme_global_err);
 #endif
 
@@ -358,7 +358,7 @@ static int fme_global_err_init(struct platform_device *pdev,
 {
 	fme_err_mask(&pdev->dev, false);
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
 	return device_add_groups(&pdev->dev, fme_global_err_groups);
 #else
 	return 0;
@@ -370,7 +370,7 @@ static void fme_global_err_uinit(struct platform_device *pdev,
 {
 	fme_err_mask(&pdev->dev, true);
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
 	device_remove_groups(&pdev->dev, fme_global_err_groups);
 #endif
 }
