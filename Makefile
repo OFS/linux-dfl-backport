@@ -2,6 +2,17 @@ KERNEL ?= $(shell uname -r)
 KERNELDIR ?= /lib/modules/$(KERNEL)/build
 LINUXINCLUDE := -I$(src)/include -I$(src)/include/uapi $(LINUXINCLUDE)
 
+RPMBUILDOPTS := -bb --build-in-place \
+                --define '_topdir /tmp/rpmbuild' \
+                --define '_rpmdir .' \
+                --define '_build_name_fmt %%{NAME}-%%{VERSION}-%%{RELEASE}.%%{ARCH}.rpm'
+
+ifeq ($(BACKPORT_VERSION),)
+BACKPORT_VERSION := $(shell git describe --always --tags --dirty --long | sed -E 's/^v//;s/([^-]*-g)/r\1/;s/-/./g;s/\.rc/rc/')
+endif
+
+export BACKPORT_VERSION
+
 # modules to build (in insmod order)
 ifndef CONFIG_REGMAP_SPI_AVMM
 obj-m += regmap-spi-avmm.o
@@ -96,11 +107,18 @@ rmmod: $(rules_rmmod)
 insmod: $(rules_insmod)
 reload: rmmod insmod
 
+# build rpm packages
+rpm: build/rpm/spec clean
+	@rpmbuild $(RPMBUILDOPTS) $<
+
 help:
 	@echo "Build Usage:"
 	@echo " make all	Build kernel modules"
 	@echo " make install	Install kernel modules to /lib/modules/$$(uname -r)/extra"
 	@echo " make clean	Remove build artifacts"
+	@echo ""
+	@echo "Package Usage:"
+	@echo "	make rpm	Build rpm package from source"
 	@echo ""
 	@echo "Test Usage:"
 	@echo " make rmmod	Remove modules from running kernel"
@@ -111,4 +129,4 @@ help:
 	@echo " KERNEL		Kernel version to build against ($$(uname -r))"
 	@echo " KERNELDIR	Path to kernel build dir (/lib/modules/<KERNEL>/build)"
 
-.PHONY: all install clean rmmod insmod reload help
+.PHONY: all install clean rmmod insmod reload rpm help
