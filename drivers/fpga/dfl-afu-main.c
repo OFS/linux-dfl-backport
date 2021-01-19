@@ -414,7 +414,7 @@ static const struct attribute_group port_hdr_group = {
 	.attrs      = port_hdr_attrs,
 	.is_visible = port_hdr_attrs_visible,
 };
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
 __ATTRIBUTE_GROUPS(port_hdr);
 #endif
 
@@ -423,14 +423,14 @@ static int port_hdr_init(struct platform_device *pdev,
 {
 	port_reset(pdev);
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
 	return device_add_groups(&pdev->dev, port_hdr_groups);
 #else
 	return 0;
 #endif
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
 static void port_hdr_uinit(struct platform_device *pdev,
 			   struct dfl_feature *feature)
 {
@@ -466,7 +466,7 @@ static const struct dfl_feature_id port_hdr_id_table[] = {
 
 static const struct dfl_feature_ops port_hdr_ops = {
 	.init = port_hdr_init,
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
 	.uinit = port_hdr_uinit,
 #endif
 	.ioctl = port_hdr_ioctl,
@@ -519,7 +519,7 @@ static const struct attribute_group port_afu_group = {
 	.attrs      = port_afu_attrs,
 	.is_visible = port_afu_attrs_visible,
 };
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
 __ATTRIBUTE_GROUPS(port_afu);
 #endif
 
@@ -537,7 +537,7 @@ static int port_afu_init(struct platform_device *pdev,
 	if (ret)
 		return ret;
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
 	ret = device_add_groups(&pdev->dev, port_afu_groups);
 	if (ret)
 		return ret;
@@ -548,7 +548,7 @@ static int port_afu_init(struct platform_device *pdev,
 	return ret;
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
 static void port_afu_uinit(struct platform_device *pdev,
 			   struct dfl_feature *feature)
 {
@@ -564,7 +564,7 @@ static const struct dfl_feature_id port_afu_id_table[] = {
 
 static const struct dfl_feature_ops port_afu_ops = {
 	.init = port_afu_init,
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
 	.uinit = port_afu_uinit,
 #endif
 };
@@ -992,7 +992,7 @@ static int afu_remove(struct platform_device *pdev)
 	return 0;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= 0x803
 static const struct attribute_group *afu_dev_groups[] = {
 	&port_hdr_group,
 	&port_afu_group,
@@ -1004,7 +1004,7 @@ static const struct attribute_group *afu_dev_groups[] = {
 static struct platform_driver afu_driver = {
 	.driver	= {
 		.name	    = DFL_FPGA_FEATURE_DEV_PORT,
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= 0x803
 		.dev_groups = afu_dev_groups,
 #endif
 	},
