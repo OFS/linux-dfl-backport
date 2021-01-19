@@ -10,6 +10,7 @@
 #include <linux/iopoll.h>
 #include <uapi/linux/intel-dfl-iopll.h>
 #include <linux/module.h>
+#include <linux/version.h>
 
 #include "dfl.h"
 
@@ -515,7 +516,11 @@ static int dfl_intel_s10_iopll_probe(struct dfl_device *dfl_dev)
 	mutex_init(&iopll->iopll_mutex);
 	dev_set_drvdata(dev, iopll);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+	return device_add_groups(dev, iopll_attr_groups);
+#else
 	return 0;
+#endif
 }
 
 static void dfl_intel_s10_iopll_remove(struct dfl_device *dfl_dev)
@@ -535,7 +540,9 @@ static const struct dfl_device_id dfl_intel_s10_iopll_ids[] = {
 static struct dfl_driver dfl_intel_s10_iopll_driver = {
 	.drv = {
 		.name = "intel-dfl-iopll",
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
 		.dev_groups = iopll_attr_groups,
+#endif
 	},
 	.id_table = dfl_intel_s10_iopll_ids,
 	.probe = dfl_intel_s10_iopll_probe,
