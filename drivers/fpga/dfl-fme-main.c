@@ -134,7 +134,7 @@ static struct attribute *fme_hdr_attrs[] = {
 static const struct attribute_group fme_hdr_group = {
 	.attrs = fme_hdr_attrs,
 };
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
 __ATTRIBUTE_GROUPS(fme_hdr);
 
 static int fme_hdr_init(struct platform_device *pdev,
@@ -196,7 +196,7 @@ static const struct dfl_feature_id fme_hdr_id_table[] = {
 };
 
 static const struct dfl_feature_ops fme_hdr_ops = {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
 	.init = fme_hdr_init,
 	.uinit = fme_hdr_uinit,
 #endif
@@ -758,7 +758,7 @@ static int fme_remove(struct platform_device *pdev)
 	return 0;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= 0x803
 static const struct attribute_group *fme_dev_groups[] = {
 	&fme_hdr_group,
 	&fme_global_err_group,
@@ -769,7 +769,7 @@ static const struct attribute_group *fme_dev_groups[] = {
 static struct platform_driver fme_driver = {
 	.driver	= {
 		.name       = DFL_FPGA_FEATURE_DEV_FME,
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= 0x803
 		.dev_groups = fme_dev_groups,
 #endif
 	},
