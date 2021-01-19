@@ -24,6 +24,8 @@ obj-m += dfl-afu.o
 obj-m += dfl-intel-s10-iopll.o
 obj-m += dfl-indirect-regmap.o
 obj-m += dfl-fme-mgr.o
+obj-m += n5010-phy.o
+obj-m += n5010-hssi.o
 obj-m += dfl-fme-region.o
 obj-m += dfl-fme-br.o
 obj-m += spi-altera.o
@@ -78,6 +80,9 @@ intel-m10-bmc-y += drivers/mfd/intel-spi-avmm.o
 intel-m10-bmc-hwmon-y := drivers/hwmon/intel-m10-bmc-hwmon.o
 intel-m10-bmc-secure-y := drivers/mfd/intel-m10-bmc-secure.o
 spi-altera-y := drivers/spi/spi-altera.o
+
+n5010-phy-y := drivers/net/ethernet/silicom/n5010-phy.o
+n5010-hssi-y := drivers/net/ethernet/silicom/n5010-hssi.o
 
 # compile all modules
 all:
