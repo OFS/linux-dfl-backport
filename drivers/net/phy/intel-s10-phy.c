@@ -11,6 +11,7 @@
 #include <linux/module.h>
 #include <linux/phy/intel-s10-phy.h>
 #include <linux/platform_device.h>
+#include <linux/version.h>
 
 /* HSSI QSFP Control & Status Registers */
 #define HSSI_QSFP_RCFG_CMD(phy)		((phy)->phy_offset + 0x0)
@@ -522,7 +523,11 @@ static int intel_s10_phy_probe(struct platform_device *pdev)
 	mutex_init(&phy->lock);
 	dev_set_drvdata(dev, phy);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+	return device_add_groups(dev, qsfp_attr_groups);
+#else
 	return 0;
+#endif
 }
 
 static int intel_s10_phy_remove(struct platform_device *pdev)
@@ -536,7 +541,9 @@ static int intel_s10_phy_remove(struct platform_device *pdev)
 static struct platform_driver intel_s10_phy_driver = {
 	.driver = {
 		.name = INTEL_S10_PHY_DRV_NAME,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
 		.dev_groups = qsfp_attr_groups,
+#endif
 	},
 	.probe = intel_s10_phy_probe,
 	.remove = intel_s10_phy_remove,
