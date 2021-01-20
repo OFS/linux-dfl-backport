@@ -11,6 +11,7 @@
 #include <linux/platform_device.h>
 #include <linux/phy/intel-s10-phy.h>
 #include <linux/slab.h>
+#include <linux/version.h>
 #include "dfl.h"
 
 /* HSSI Private Feature: Capability - Read-Only */
@@ -55,6 +56,8 @@ struct dfl_hssi {
 	unsigned int qsfp_cnt;
 	struct platform_device *intel_s10_phy[];
 };
+
+
 
 static int hssi_create_qsfp(struct dfl_hssi *hssi, struct dfl_device *dfl_dev,
 			    int index)
@@ -141,6 +144,10 @@ static int dfl_hssi_probe(struct dfl_device *dfl_dev)
 			goto error_exit;
 	}
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+	ret = device_add_groups(dev, hssi_groups);
+#endif
+
 	return 0;
 
 error_exit:
@@ -157,6 +164,10 @@ static void dfl_hssi_remove(struct dfl_device *dfl_dev)
 
 	for (i = 0; i < hssi->qsfp_cnt; i++)
 		hssi_destroy_qsfp(hssi, i);
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+	device_remove_groups(&dfl_dev->dev, hssi_groups);
+#endif
 }
 
 #define FME_FEATURE_ID_HSSI_ETH	0xa
@@ -169,7 +180,9 @@ static const struct dfl_device_id dfl_hssi_ids[] = {
 static struct dfl_driver dfl_hssi_driver = {
 	.drv = {
 		.name = "intel-s10-hssi",
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
 		.dev_groups = hssi_groups,
+#endif
 	},
 	.id_table = dfl_hssi_ids,
 	.probe = dfl_hssi_probe,
