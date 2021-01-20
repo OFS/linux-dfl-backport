@@ -523,7 +523,7 @@ static int intel_s10_phy_probe(struct platform_device *pdev)
 	mutex_init(&phy->lock);
 	dev_set_drvdata(dev, phy);
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
 	return device_add_groups(dev, qsfp_attr_groups);
 #else
 	return 0;
@@ -541,7 +541,7 @@ static int intel_s10_phy_remove(struct platform_device *pdev)
 static struct platform_driver intel_s10_phy_driver = {
 	.driver = {
 		.name = INTEL_S10_PHY_DRV_NAME,
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= 0x803
 		.dev_groups = qsfp_attr_groups,
 #endif
 	},
