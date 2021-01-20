@@ -782,7 +782,7 @@ static int m10bmc_secure_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
 	ret = device_add_groups(sec->dev, m10bmc_sec_attr_groups);
 	if (ret)
 		return ret;
@@ -809,7 +809,7 @@ static struct platform_driver intel_m10bmc_secure_driver = {
 	.probe = m10bmc_secure_probe,
 	.driver = {
 		.name = "intel-m10bmc-secure",
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= 0x803
 		.dev_groups = m10bmc_sec_attr_groups,
 #endif
 	},
