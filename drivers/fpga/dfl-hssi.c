@@ -144,7 +144,7 @@ static int dfl_hssi_probe(struct dfl_device *dfl_dev)
 			goto error_exit;
 	}
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
 	ret = device_add_groups(dev, hssi_groups);
 #endif
 
@@ -165,7 +165,7 @@ static void dfl_hssi_remove(struct dfl_device *dfl_dev)
 	for (i = 0; i < hssi->qsfp_cnt; i++)
 		hssi_destroy_qsfp(hssi, i);
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
 	device_remove_groups(&dfl_dev->dev, hssi_groups);
 #endif
 }
@@ -180,7 +180,7 @@ static const struct dfl_device_id dfl_hssi_ids[] = {
 static struct dfl_driver dfl_hssi_driver = {
 	.drv = {
 		.name = "intel-s10-hssi",
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= 0x803
 		.dev_groups = hssi_groups,
 #endif
 	},
