@@ -11,9 +11,17 @@
 #include <linux/regmap.h>
 #include <linux/rwsem.h>
 
-#define M10BMC_LEGACY_SYS_BASE	0x300400
-#define M10BMC_SYS_BASE		0x300800
-#define M10BMC_MEM_END		0x200000fc
+/* Supported MAX10 BMC types */
+enum m10bmc_type {
+	M10_N3000,
+	M10_D5005,
+	M10_N5010,
+};
+
+#define M10BMC_LEGACY_SYS_BASE		0x300400
+#define M10BMC_SYS_BASE			0x300800
+#define M10BMC_SYS_END			0x300fff
+#define M10BMC_MEM_END			0x200000fc
 
 #define M10BMC_STAGING_BASE	0x18000000
 #define M10BMC_STAGING_SIZE	0x3800000
@@ -248,12 +256,6 @@ int m10bmc_fw_state_enter(struct intel_m10bmc *m10bmc,
 			  enum m10bmc_fw_state new_state);
 
 void m10bmc_fw_state_exit(struct intel_m10bmc *m10bmc);
-
-/* Supported MAX10 BMC types */
-enum m10bmc_type {
-	M10_N3000,
-	M10_D5005
-};
 
 /* M10BMC system sub devices for PAC N3000 */
 /* subdev Parkvale Interface  */
