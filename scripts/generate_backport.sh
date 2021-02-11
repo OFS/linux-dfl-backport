@@ -22,14 +22,12 @@ BP=$PWD/linux-dfl-backport
 M=${BP}/scripts/manifest.${ST}
 
 cd ${BP}
-git add scripts/*.sh scripts/manifest*
-git commit -m "Import scripts"
+#git add scripts/*.sh scripts/manifest*
+#git commit -m "Import scripts"
     
-git remote add pub ../linux.git
-git remote add dfl ../linux-dfl.git
-git remote update
-cd ..
-fi
+#git remote add dfl ../linux-dfl.git
+#git remote update
+#cd ..
 
 while read -r line
 do

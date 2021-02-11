@@ -1,0 +1,188 @@
+#!/bin/sh
+set -x
+
+if [ ! -d linux.git ]; then
+    git clone --bare http://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
+fi
+if [ ! -d linux ]; then
+   git clone linux.git
+fi
+
+if [ ! -d linux-dfl.git ]; then
+    git clone --bare https://github.com/OPAE/linux-dfl.git
+fi
+if [ ! -d linux-dfl ]; then
+   git clone linux-dfl.git
+fi
+
+ST=v5.8
+cd linux
+git checkout ${ST}
+cd ..
+
+B=fpga-ofs-dev-5.8.0
+cd linux-dfl
+git checkout $B
+cd ..
+
+M=manifest.${ST}
+BP=bp
+
+if [ ! -d ${BP} ]; then
+    mkdir ${BP}
+    cd ${BP}
+    git init .
+    touch README
+    git add *
+    git commit -m "initial commit"
+    
+    git remote add pub ../linux.git
+    git remote add dfl ../linux-dfl.git
+    git remote update
+    cd ..
+fi
+
+cd ${BP}
+git checkout master
+
+git branch -D m
+git checkout -b m
+while read -r line
+do
+    d=`dirname $line`
+    mkdir -p $d
+    if [ -f ../linux/$line ]; then
+	cp ../linux/$line $line
+    else
+	mkdir -p $line
+    fi
+	   
+done < ../${M}
+git add *
+git commit -m "Import from mainline ${ST}"
+
+# v5.9
+L="3011d314751535782508a86bbd8de415ea99909f
+8e04187c1bc7953f6dfad3400c58b1b0b0ad767b
+1fccd182a4694a848f2d6f3b1820d6fc71d9c99d
+55dc9b87e4a8e4d0fb1b7169bab7e23d27ba4209
+d1ddca78f9f603ab70369e76fa2610d7e385c1b8
+23f872b6ece695750667a44016037154b91addef
+e1d9ec3af3463c1721723f68403ee14214d0d2f6
+88aaab9218f87c7c32e5db93554cf110352c3c13
+d3fbd739fc8a3cf9418c4a17ba7b2b5be24a3b2c
+3c6519736eefebafdf8c82d46f64b214403b5260
+3820061d38156d88443d32a9a6c701d281234746
+d9dd0fb0e197ae766f0f5e06d23f5f5e1888c511
+de5fd9cb6a3f89a1ac8f27883d029f823112243f
+1ac6f21a948b45a49737a5eff6b4dae9f37a8dc0
+dd2784c01d93db20252a6416f3007cbbb89e4758
+8d021039cbb5e358c7c07c562811253a61c8d551
+bfef946dbe1bbe6cae97bba27594e8d5b0e01ffa
+322b598be4d9b9090cda560c4caab78704615ab4
+fe6a3d6521227e49857d0d6caabbdae3bd4aef89
+d43f20bae5173ba431526040c320c36fdd4f086d
+09d86150141955ba1b3d7cbef23785f4996e4d6f
+8adfb7c694d911669eb65256c760b3e250db1df5
+eacfbf589c904bf8362cbd2d6cac123b0230e272
+2de4ba17f7906fb5f83664fb7031b26d1668b4ba"
+
+for l in $L ; do
+    git cherry-pick $l
+    if [ $? != 0 ]; then
+	git reset --hard
+	git show $l
+	exit 1
+    fi
+done
+
+NM=manifest.v5.9
+cd ../linux
+git checkout v5.9
+cd -
+while read -r line
+do
+    commit=
+    echo $line | grep '@'
+    if [ $? = 0 ]; then
+	line=`echo $line | tr '@' ' '`
+	commit=`echo $line | awk '{ print $2 }'`
+	line=`echo $line | awk '{ print $1 }'`
+    fi
+    if [ x$commit != x ]; then
+	cd ../linux
+	git checkout ${commit}~1
+	cd -
+    fi
+    d=`dirname $line`
+    mkdir -p $d
+    if [ -f ../linux/$line ]; then
+	cp ../linux/$line $line
+    else
+	mkdir -p $line
+    fi
+    if [ x$commit != x ]; then
+	cd ../linux
+	git checkout v5.9
+	cd -
+    fi
+	   
+done < ../${NM}
+git add *
+git commit -m "Import from mainline v5.9"
+
+# 5.10
+L="7fbc2bc2fbe1055c563134b738ff4d94fb42892f
+8a5de2de0339cdb7bd269140f857b62ba7222759
+5e36aff2e1bf75b964b83a2bf45f520e983e7b70
+7f9fb67358a2bcaacbdfeee12e0f19e98c8bdf55
+a44ecdc9c97e75e229ec454ba774327769c5b81c
+16b7856d94807abeb62f615a8580fd7ae8a27515
+eefe64fba9f2f2328c27ed9d9d02107083a62659
+4e772ab86b3ee24a936b10a291ce31c1f0c2bbb4
+89eb35e810a87d69c878d66e89c7f19f34539036
+c71e805083af55e0c8eae33bb0653d0105556625
+9ba3a0aa09fe505540a3bdd11f0da3b8e9d73055
+876611c493b10cbb59e0e2143d3e744d0442de63
+865e4fc013ba58cc3245fc1180033ee52e9c426e
+1a16af33ba88ef25e206a13366379179cae79d23"
+
+for l in $L ; do
+    git cherry-pick $l
+    if [ $? != 0 ]; then
+	git reset --hard
+	git show $l
+	exit 1
+    fi
+done
+
+git checkout master
+git branch -D $B
+git checkout -b $B
+while read -r line
+do
+    d=`dirname $line`
+    mkdir -p $d
+    if [ -f ../linux/$line ]; then
+	cp ../linux/$line $line
+    else
+	mkdir -p $line
+    fi
+	   
+done < ../${M}
+git add *
+git commit -m "Import from mainline ${ST}"
+
+CF=bcf876870b95592b52519ed4aafcf9d95999bc9c
+CT=OFS-EA-4
+L=`git rev-list --reverse ${CF}..${CT}`
+for l in $L ; do
+    git cherry-pick $l
+    if [ $? != 0 ]; then
+	git reset --hard
+	git show $l
+	exit 1
+    fi
+done
+git tag -d ${CT}
+git tag ${CT}
