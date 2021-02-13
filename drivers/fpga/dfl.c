@@ -1696,7 +1696,7 @@ int dfl_fpga_cdev_assign_port(struct dfl_fpga_cdev *cdev, int port_id)
 		goto put_dev_exit;
 	}
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 5, 0)
+#if RHEL_RELEASE_CODE >= 0x805
 	/*
 	 * HACK: See the commit message associated with the
 	 * INIT_LIST_HEAD() line below. The long term fix
