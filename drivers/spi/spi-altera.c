@@ -18,6 +18,7 @@
 #include <linux/spi/spi.h>
 #include <linux/io.h>
 #include <linux/of.h>
+#include <linux/version.h>
 
 #define DRV_NAME "spi_altera"
 
@@ -288,6 +289,11 @@ static int altera_spi_probe(struct platform_device *pdev)
 		if (regoff)
 			hw->regoff = regoff->start;
 	} else {
+#ifdef RHEL_RELEASE
+		/* RHEL does not export regm_regmap_init_mmio */
+		err = -ENOTSUPP;
+		goto exit;
+#else
 		void __iomem *res;
 
 		res = devm_platform_ioremap_resource(pdev, 0);
@@ -303,6 +309,7 @@ static int altera_spi_probe(struct platform_device *pdev)
 			err = PTR_ERR(hw->regmap);
 			goto exit;
 		}
+#endif
 	}
 
 	/* program defaults into the registers */
