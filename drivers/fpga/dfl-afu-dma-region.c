@@ -17,7 +17,7 @@
 
 #include "dfl-afu.h"
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 6, 0)
+#if RHEL_RELEASE_CODE < 0x804
 
 #define pin_user_pages_fast get_user_pages_fast
 #define unpin_user_pages put_all_pages
@@ -31,7 +31,7 @@ static void put_all_pages(struct page **pages, int npages)
 			put_page(pages[i]);
 }
 
-#endif /* < KERNEL_VERSION(5, 6, 0) */
+#endif
 
 void afu_dma_region_init(struct dfl_feature_platform_data *pdata)
 {
