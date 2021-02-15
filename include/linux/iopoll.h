@@ -6,7 +6,7 @@
 #include <linux/version.h>
 #include_next <linux/iopoll.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 7, 0)
+#if RHEL_RELEASE_CODE < 0x804
 
 #define read_poll_timeout(op, val, cond, sleep_us, timeout_us, \
 				sleep_before_read, args...) \
@@ -32,6 +32,6 @@
 	(cond) ? 0 : -ETIMEDOUT; \
 })
 
-#endif /* < KERNEL_VERSION(5, 7, 0) */
+#endif
 
 #endif
