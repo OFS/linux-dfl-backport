@@ -29,7 +29,7 @@ dkms install %{name}/%{version}-%{release} --rpm_safe_upgrade
 dkms remove %{name}/%{version}-%{release} --rpm_safe_upgrade --all
 
 %postun
-rmdir %{_dstdir} %{_regmapdstdir}
+rmdir %{_dstdir}
 
 %files
 %defattr(-,root,root)
