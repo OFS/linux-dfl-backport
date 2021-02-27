@@ -372,9 +372,9 @@ static struct attribute *port_hdr_attrs[] = {
 };
 #if RHEL_RELEASE_CODE < 0x803
 ATTRIBUTE_GROUPS(port_hdr);
-#endif
 
-#if RHEL_RELEASE_CODE >= 0x803
+#else
+
 static umode_t port_hdr_attrs_visible(struct kobject *kobj,
 				      struct attribute *attr, int n)
 {
