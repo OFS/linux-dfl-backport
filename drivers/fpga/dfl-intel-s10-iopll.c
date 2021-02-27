@@ -540,7 +540,7 @@ static const struct dfl_device_id dfl_intel_s10_iopll_ids[] = {
 static struct dfl_driver dfl_intel_s10_iopll_driver = {
 	.drv = {
 		.name = "intel-dfl-iopll",
-#if RHEL_RELEASE_CODE > 0x803
+#if RHEL_RELEASE_CODE >= 0x803
 		.dev_groups = iopll_attr_groups,
 #endif
 	},
