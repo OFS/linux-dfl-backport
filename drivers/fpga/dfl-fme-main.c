@@ -124,11 +124,8 @@ static struct attribute *fme_hdr_attrs[] = {
 	NULL,
 };
 
-#if RHEL_RELEASE_CODE >= 0x803
-static const struct attribute_group fme_hdr_group = {
-	.attrs = fme_hdr_attrs,
-};
-#else
+
+#if RHEL_RELEASE_CODE < 0x803
 ATTRIBUTE_GROUPS(fme_hdr);
 
 static int fme_hdr_init(struct platform_device *pdev,
@@ -142,6 +139,10 @@ static void fme_hdr_uinit(struct platform_device *pdev,
 {
 	device_remove_groups(&pdev->dev, fme_hdr_groups);
 }
+#else
+static const struct attribute_group fme_hdr_group = {
+	.attrs = fme_hdr_attrs,
+};
 #endif
 
 static long fme_hdr_ioctl_release_port(struct dfl_feature_platform_data *pdata,
