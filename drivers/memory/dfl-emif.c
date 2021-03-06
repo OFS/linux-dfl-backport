@@ -215,6 +215,7 @@ static int dfl_emif_probe(struct dfl_device *ddev)
 {
 	struct device *dev = &ddev->dev;
 	struct dfl_emif *de;
+	int ret = 0;
 
 	de = devm_kzalloc(dev, sizeof(*de), GFP_KERNEL);
 	if (!de)
@@ -228,7 +229,10 @@ static int dfl_emif_probe(struct dfl_device *ddev)
 	spin_lock_init(&de->lock);
 	dev_set_drvdata(dev, de);
 
-	return 0;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
+	ret = device_add_groups(dev, dfl_emif_groups);
+#endif
+	return ret;
 }
 
 static const struct dfl_device_id dfl_emif_ids[] = {
@@ -240,7 +244,9 @@ MODULE_DEVICE_TABLE(dfl, dfl_emif_ids);
 static struct dfl_driver dfl_emif_driver = {
 	.drv	= {
 		.name       = "dfl-emif",
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= 0x803
 		.dev_groups = dfl_emif_groups,
+#endif
 	},
 	.id_table = dfl_emif_ids,
 	.probe   = dfl_emif_probe,
