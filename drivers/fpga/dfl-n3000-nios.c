@@ -568,6 +568,10 @@ static int n3000_nios_probe(struct dfl_device *ddev)
 	if (ret)
 		dev_err(dev, "altera spi controller create failed: %d\n", ret);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
+	ret = device_add_groups(dev, n3000_nios_groups);
+#endif
+
 	return ret;
 }
 
@@ -589,7 +593,9 @@ MODULE_DEVICE_TABLE(dfl, n3000_nios_ids);
 static struct dfl_driver n3000_nios_driver = {
 	.drv	= {
 		.name       = "dfl-n3000-nios",
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= 0x803
 		.dev_groups = n3000_nios_groups,
+#endif
 	},
 	.id_table = n3000_nios_ids,
 	.probe   = n3000_nios_probe,
