@@ -27,7 +27,43 @@ struct m10bmc_retimer {
 	int num_devs;
 	struct device *base_dev;
 	struct mii_bus *retimer_mii_bus;
+	struct list_head	list;
 };
+
+static LIST_HEAD(retimers);
+static DEFINE_MUTEX(retimers_mutex);
+
+static void retimers_add(struct m10bmc_retimer *retimer) {
+	mutex_lock(&retimers_mutex);
+	list_add_tail(&retimer->list, &retimers);
+	mutex_unlock(&retimers_mutex);
+}
+
+static void retimers_remove(struct m10bmc_retimer *retimer) {
+	mutex_lock(&retimers_mutex);
+	list_del(&retimer->list);
+	mutex_unlock(&retimers_mutex);
+}
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 6, 0) && RHEL_RELEASE_CODE < 0x803
+struct mii_bus *mdio_find_bus(const char *mdio_name) {
+	struct mii_bus *ret = NULL;
+	struct m10bmc_retimer *retimer;
+
+	mutex_lock(&retimers_mutex);
+
+	list_for_each_entry(retimer, &retimers, list) {
+		if (!strcmp(retimer->retimer_mii_bus->id, mdio_name)) {
+			ret = retimer->retimer_mii_bus;
+			break;
+		}
+	}
+
+	mutex_unlock(&retimers_mutex);
+	return ret;
+}
+EXPORT_SYMBOL(mdio_find_bus);
+#endif
 
 #define retimer_version_attr(chip, type, reg, field)			\
 static ssize_t								\
@@ -206,6 +242,7 @@ static int intel_m10bmc_retimer_probe(struct platform_device *pdev)
 	struct intel_m10bmc_retimer_pdata *pdata = dev_get_platdata(&pdev->dev);
 	struct intel_m10bmc *m10bmc = dev_get_drvdata(pdev->dev.parent);
 	struct m10bmc_retimer *retimer;
+	int ret = 0;
 
 	retimer = devm_kzalloc(&pdev->dev, sizeof(*retimer), GFP_KERNEL);
 	if (!retimer)
@@ -218,12 +255,23 @@ static int intel_m10bmc_retimer_probe(struct platform_device *pdev)
 	retimer->base_dev = pdata->retimer_master;
 	retimer->num_devs = NUM_CHIP * MAX_LINK;
 
-	return m10bmc_retimer_mii_bus_init(retimer);
+	ret = m10bmc_retimer_mii_bus_init(retimer);
+	if (ret)
+		return ret;
+
+	retimers_add(retimer);
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
+	ret = device_add_groups(&pdev->dev, m10bmc_retimer_groups);
+#endif
+	return ret;
 }
 
 static int intel_m10bmc_retimer_remove(struct platform_device *pdev)
 {
 	struct m10bmc_retimer *retimer = dev_get_drvdata(&pdev->dev);
+
+	retimers_remove(retimer);
 
 	m10bmc_retimer_mii_bus_uinit(retimer);
 
@@ -235,7 +283,9 @@ static struct platform_driver intel_m10bmc_retimer_driver = {
 	.remove = intel_m10bmc_retimer_remove,
 	.driver = {
 		.name = N3000BMC_RETIMER_DEV_NAME,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= 0x803
 		.dev_groups = m10bmc_retimer_groups,
+#endif
 	},
 };
 
