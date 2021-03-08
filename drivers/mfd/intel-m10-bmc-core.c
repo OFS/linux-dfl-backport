@@ -12,6 +12,40 @@
 #include <linux/module.h>
 #include <linux/version.h>
 
+static const struct m10bmc_csr m10bmc_pmci_csr = {
+	.base = M10BMC_PMCI_SYS_BASE,
+	.build_version = M10BMC_PMCI_BUILD_VER,
+	.fw_version = NIOS2_PMCI_FW_VERSION,
+	.mac_low = M10BMC_PMCI_MAC_LOW,
+	.mac_high = M10BMC_PMCI_MAC_HIGH,
+	.bmc_prog_addr = PMCI_BMC_PROG_ADDR,
+	.bmc_reh_addr = PMCI_BMC_REH_ADDR,
+	.bmc_magic = PMCI_BMC_PROG_MAGIC,
+	.sr_prog_addr = PMCI_SR_PROG_ADDR,
+	.sr_reh_addr = PMCI_SR_REH_ADDR,
+	.sr_magic = PMCI_SR_PROG_MAGIC,
+	.pr_prog_addr = PMCI_PR_PROG_ADDR,
+	.pr_reh_addr = PMCI_PR_REH_ADDR,
+	.pr_magic = PMCI_PR_PROG_MAGIC,
+};
+
+static const struct m10bmc_csr m10bmc_spi_csr = {
+	.base = M10BMC_SYS_BASE,
+	.build_version = M10BMC_BUILD_VER,
+	.fw_version = NIOS2_FW_VERSION,
+	.mac_low = M10BMC_MAC_LOW,
+	.mac_high = M10BMC_MAC_HIGH,
+	.bmc_prog_addr = BMC_PROG_ADDR,
+	.bmc_reh_addr = BMC_REH_ADDR,
+	.bmc_magic = BMC_PROG_MAGIC,
+	.sr_prog_addr = SR_PROG_ADDR,
+	.sr_reh_addr = SR_REH_ADDR,
+	.sr_magic = SR_PROG_MAGIC,
+	.pr_prog_addr = PR_PROG_ADDR,
+	.pr_reh_addr = PR_REH_ADDR,
+	.pr_magic = PR_PROG_MAGIC,
+};
+
 static struct mfd_cell m10bmc_n6010_bmc_subdevs[] = {
 	{ .name = "n6010bmc-hwmon" },
 	{ .name = "n6010bmc-secure" }
@@ -94,14 +128,14 @@ int m10bmc_sys_read(struct intel_m10bmc *m10bmc, unsigned int offset,
 	int ret;
 
 	if (!is_handshake_sys_reg(m10bmc, offset))
-		return m10bmc_raw_read(m10bmc, M10BMC_SYS_BASE + (offset), val);
+		return m10bmc_raw_read(m10bmc, m10bmc->csr->base + (offset), val);
 
 	down_read(&m10bmc->bmcfw_lock);
 
 	if (m10bmc->bmcfw_state == M10BMC_FW_STATE_SEC_UPDATE)
 		ret = -EBUSY;
 	else
-		ret = m10bmc_raw_read(m10bmc, M10BMC_SYS_BASE + (offset), val);
+		ret = m10bmc_raw_read(m10bmc, m10bmc->csr->base + (offset), val);
 
 	up_read(&m10bmc->bmcfw_lock);
 
@@ -116,7 +150,7 @@ int m10bmc_sys_update_bits(struct intel_m10bmc *m10bmc, unsigned int offset,
 
 	if (!is_handshake_sys_reg(m10bmc, offset))
 		return regmap_update_bits(m10bmc->regmap,
-					  M10BMC_SYS_BASE + (offset), msk, val);
+					  m10bmc->csr->base + (offset), msk, val);
 
 	down_read(&m10bmc->bmcfw_lock);
 
@@ -124,7 +158,7 @@ int m10bmc_sys_update_bits(struct intel_m10bmc *m10bmc, unsigned int offset,
 		ret = -EBUSY;
 	else
 		ret = regmap_update_bits(m10bmc->regmap,
-					 M10BMC_SYS_BASE + (offset), msk, val);
+					 m10bmc->csr->base + (offset), msk, val);
 
 	up_read(&m10bmc->bmcfw_lock);
 
@@ -139,7 +173,7 @@ static ssize_t bmc_version_show(struct device *dev,
 	unsigned int val;
 	int ret;
 
-	ret = m10bmc_sys_read(ddata, M10BMC_BUILD_VER, &val);
+	ret = m10bmc_sys_read(ddata, ddata->csr->build_version, &val);
 	if (ret)
 		return ret;
 
@@ -154,7 +188,7 @@ static ssize_t bmcfw_version_show(struct device *dev,
 	unsigned int val;
 	int ret;
 
-	ret = m10bmc_sys_read(ddata, NIOS2_FW_VERSION, &val);
+	ret = m10bmc_sys_read(ddata, ddata->csr->fw_version, &val);
 	if (ret)
 		return ret;
 
@@ -166,24 +200,24 @@ static ssize_t mac_address_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
 	struct intel_m10bmc *ddata = dev_get_drvdata(dev);
-	unsigned int macaddr1, macaddr2;
+	unsigned int macaddr_low, macaddr_high;
 	int ret;
 
-	ret = m10bmc_sys_read(ddata, M10BMC_MACADDR1, &macaddr1);
+	ret = m10bmc_sys_read(ddata, ddata->csr->mac_low, &macaddr_low);
 	if (ret)
 		return ret;
 
-	ret = m10bmc_sys_read(ddata, M10BMC_MACADDR2, &macaddr2);
+	ret = m10bmc_sys_read(ddata, ddata->csr->mac_high, &macaddr_high);
 	if (ret)
 		return ret;
 
 	return sysfs_emit(buf, "%02x:%02x:%02x:%02x:%02x:%02x\n",
-			  (u8)FIELD_GET(M10BMC_MAC_BYTE1, macaddr1),
-			  (u8)FIELD_GET(M10BMC_MAC_BYTE2, macaddr1),
-			  (u8)FIELD_GET(M10BMC_MAC_BYTE3, macaddr1),
-			  (u8)FIELD_GET(M10BMC_MAC_BYTE4, macaddr1),
-			  (u8)FIELD_GET(M10BMC_MAC_BYTE5, macaddr2),
-			  (u8)FIELD_GET(M10BMC_MAC_BYTE6, macaddr2));
+			  (u8)FIELD_GET(M10BMC_MAC_BYTE1, macaddr_low),
+			  (u8)FIELD_GET(M10BMC_MAC_BYTE2, macaddr_low),
+			  (u8)FIELD_GET(M10BMC_MAC_BYTE3, macaddr_low),
+			  (u8)FIELD_GET(M10BMC_MAC_BYTE4, macaddr_low),
+			  (u8)FIELD_GET(M10BMC_MAC_BYTE5, macaddr_high),
+			  (u8)FIELD_GET(M10BMC_MAC_BYTE6, macaddr_high));
 }
 static DEVICE_ATTR_RO(mac_address);
 
@@ -191,15 +225,15 @@ static ssize_t mac_count_show(struct device *dev,
 			      struct device_attribute *attr, char *buf)
 {
 	struct intel_m10bmc *ddata = dev_get_drvdata(dev);
-	unsigned int macaddr2;
+	unsigned int macaddr_high;
 	int ret;
 
-	ret = m10bmc_sys_read(ddata, M10BMC_MACADDR2, &macaddr2);
+	ret = m10bmc_sys_read(ddata, ddata->csr->mac_high, &macaddr_high);
 	if (ret)
 		return ret;
 
 	return sysfs_emit(buf, "%u\n",
-			  (u8)FIELD_GET(M10BMC_MAC_COUNT, macaddr2));
+			  (u8)FIELD_GET(M10BMC_MAC_COUNT, macaddr_high));
 }
 static DEVICE_ATTR_RO(mac_count);
 
@@ -270,6 +304,7 @@ int m10bmc_dev_init(struct intel_m10bmc *m10bmc)
 		m10bmc->handshake_sys_reg_ranges = n3000_fw_handshake_regs;
 		m10bmc->handshake_sys_reg_nranges =
 			ARRAY_SIZE(n3000_fw_handshake_regs);
+		m10bmc->csr = &m10bmc_spi_csr;
 		break;
 	case M10_D5005:
 		cells = m10bmc_d5005_subdevs;
@@ -277,6 +312,7 @@ int m10bmc_dev_init(struct intel_m10bmc *m10bmc)
 		m10bmc->handshake_sys_reg_ranges = d5005_fw_handshake_regs;
 		m10bmc->handshake_sys_reg_nranges =
 			ARRAY_SIZE(d5005_fw_handshake_regs);
+		m10bmc->csr = &m10bmc_spi_csr;
 		break;
 	case M10_N5010:
 		cells = m10bmc_n5010_subdevs;
@@ -284,6 +320,7 @@ int m10bmc_dev_init(struct intel_m10bmc *m10bmc)
 		m10bmc->handshake_sys_reg_ranges = n5010_fw_handshake_regs;
 		m10bmc->handshake_sys_reg_nranges =
 			ARRAY_SIZE(n5010_fw_handshake_regs);
+		m10bmc->csr = &m10bmc_spi_csr;
 		break;
 	case M10_N6010:
 		cells = m10bmc_n6010_bmc_subdevs;
@@ -291,6 +328,7 @@ int m10bmc_dev_init(struct intel_m10bmc *m10bmc)
 		m10bmc->handshake_sys_reg_ranges = n6010_fw_handshake_regs;
 		m10bmc->handshake_sys_reg_nranges =
 			ARRAY_SIZE(n6010_fw_handshake_regs);
+		m10bmc->csr = &m10bmc_pmci_csr;
 		break;
 	default:
 		return -ENODEV;
