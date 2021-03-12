@@ -551,6 +551,7 @@ static struct dfl_driver dfl_intel_s10_iopll_driver = {
 
 module_dfl_driver(dfl_intel_s10_iopll_driver);
 
+MODULE_ALIAS("dfl:t0001f0014");
 MODULE_DEVICE_TABLE(dfl, dfl_intel_s10_iopll_ids);
 MODULE_DESCRIPTION("DFL Intel S10 IOPLL driver");
 MODULE_AUTHOR("Intel Corporation");
