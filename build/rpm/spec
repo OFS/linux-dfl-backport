@@ -29,6 +29,7 @@ dkms add %{name}/%{version}-%{release} --rpm_safe_upgrade --no-initrd
 dkms install %{name}/%{version}-%{release} --rpm_safe_upgrade --no-initrd
 
 %preun
+make -C %{_dstdir} rmmod
 dkms remove %{name}/%{version}-%{release} --rpm_safe_upgrade --no-initrd --all
 
 %postun
