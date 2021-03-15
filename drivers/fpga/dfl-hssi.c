@@ -191,6 +191,7 @@ static struct dfl_driver dfl_hssi_driver = {
 
 module_dfl_driver(dfl_hssi_driver);
 
+MODULE_ALIAS("dfl:t0000f000A");
 MODULE_DEVICE_TABLE(dfl, dfl_hssi_ids);
 MODULE_DESCRIPTION("DFL HSSI driver");
 MODULE_AUTHOR("Intel Corporation");
