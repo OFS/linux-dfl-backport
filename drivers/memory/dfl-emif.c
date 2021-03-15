@@ -235,6 +235,7 @@ static const struct dfl_device_id dfl_emif_ids[] = {
 	{ FME_ID, FME_FEATURE_ID_EMIF },
 	{ }
 };
+MODULE_ALIAS("dfl:t0000f0009");
 MODULE_DEVICE_TABLE(dfl, dfl_emif_ids);
 
 static struct dfl_driver dfl_emif_driver = {
