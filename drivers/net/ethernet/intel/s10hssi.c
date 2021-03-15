@@ -607,6 +607,7 @@ static struct dfl_driver s10hssi_mac_driver = {
 };
 
 module_dfl_driver(s10hssi_mac_driver);
+MODULE_ALIAS("dfl:t0000f000F");
 MODULE_DEVICE_TABLE(dfl, s10hssi_mac_ids);
 MODULE_DESCRIPTION("Network Device Driver for Intel(R) Startix10 HSSI");
 MODULE_AUTHOR("Intel Corporation");
