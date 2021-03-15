@@ -10,6 +10,7 @@ Requires:           dkms, (kernel-devel if kernel), (kernel-rt-devel if kernel-r
 
 %define _dstdir %{_usrsrc}/linux-dfl-backport-%{version}-%{release}
 %define _pkgdir %{buildroot}%{_dstdir}
+%define _dracut %{_prefix}/lib/dracut/dracut.conf.d/90-linux-dfl-backport.conf
 
 %description
 Device Feature List (dfl) is used by FPGAs to communicate features
@@ -20,6 +21,8 @@ version of the current dfl support.
 %install
 install -d %{_pkgdir}
 cp -a build/dkms/dkms.conf Makefile drivers include %{_pkgdir}
+install -d $(dirname %{buildroot}%{_dracut})
+echo 'omit_drivers+="%_modules"' > %{buildroot}%{_dracut}
 
 %post
 dkms add %{name}/%{version}-%{release} --rpm_safe_upgrade
@@ -34,3 +37,4 @@ rmdir %{_dstdir}
 %files
 %defattr(-,root,root)
 %{_dstdir}/*
+%{_dracut}

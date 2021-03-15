@@ -2,10 +2,11 @@ KERNEL ?= $(shell uname -r)
 KERNELDIR ?= /lib/modules/$(KERNEL)/build
 LINUXINCLUDE := -I$(src)/include -I$(src)/include/uapi $(LINUXINCLUDE)
 
-RPMBUILDOPTS := -bb --build-in-place \
-                --define '_topdir /tmp/rpmbuild' \
-                --define '_rpmdir .' \
-                --define '_build_name_fmt %%{NAME}-%%{VERSION}-%%{RELEASE}.%%{ARCH}.rpm'
+RPMBUILDOPTS = -bb --build-in-place \
+               --define '_topdir /tmp/rpmbuild' \
+               --define '_rpmdir .' \
+               --define '_build_name_fmt %%{NAME}-%%{VERSION}-%%{RELEASE}.%%{ARCH}.rpm' \
+               --define '_modules $(reverse)'
 
 ifeq ($(BACKPORT_VERSION),)
 BACKPORT_VERSION := $(shell git describe --always --tags --dirty --long | sed -E 's/^v//;s/([^-]*-g)/r\1/;s/-/./g;s/\.rc/rc/')
