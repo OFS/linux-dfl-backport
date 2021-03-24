@@ -629,7 +629,6 @@ static struct dfl_driver dfl_eth_group_driver = {
 
 module_dfl_driver(dfl_eth_group_driver);
 
-MODULE_ALIAS("dfl:t0000f0010");
 MODULE_DEVICE_TABLE(dfl, dfl_eth_group_ids);
 MODULE_DESCRIPTION("DFL ether group driver");
 MODULE_AUTHOR("Intel Corporation");
