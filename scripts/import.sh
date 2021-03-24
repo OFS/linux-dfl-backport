@@ -17,6 +17,7 @@ remote() {
 
 import() {
   git restore --pathspec-from-file $manifest --source $revision
+  git restore .
   git add .
   git commit -m "Import from mainline $revision"
 }
