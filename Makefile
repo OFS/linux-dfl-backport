@@ -2,6 +2,10 @@ KERNEL ?= $(shell uname -r)
 KERNELDIR ?= /lib/modules/$(KERNEL)/build
 LINUXINCLUDE := -I$(src)/include -I$(src)/include/uapi $(LINUXINCLUDE)
 
+ifeq ($(DEBUG),1)
+DYNDBG = dyndbg=+p
+endif
+
 RPMBUILDOPTS = -bb --build-in-place \
                --define '_topdir /tmp/rpmbuild' \
                --define '_rpmdir .' \
@@ -122,7 +126,7 @@ $(rules_rmmod): rmmod_%:
 
 $(rules_insmod): insmod_%:
 	@if ! lsmod | grep -q $* && test -f $*.ko; then \
-		insmod $*.ko; \
+		insmod $*.ko $(DYNDBG); \
 	fi
 
 rmmod: $(rules_rmmod)
@@ -150,5 +154,8 @@ help:
 	@echo "Build Arguments:"
 	@echo " KERNEL		Kernel version to build against ($$(uname -r))"
 	@echo " KERNELDIR	Path to kernel build dir (/lib/modules/<KERNEL>/build)"
+	@echo ""
+	@echo "Test Arguments:"
+	@echo " DEBUG=<0|1>	Toggl dynamic debug when inserting modules (0)
 
 .PHONY: all install clean rmmod insmod reload rpm help
