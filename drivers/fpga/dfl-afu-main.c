@@ -100,7 +100,7 @@ int __afu_port_disable(struct dfl_feature_dev_data *fdata)
 			       v & PORT_CTRL_SFTRST_ACK,
 			       RST_POLL_INVL, RST_POLL_TIMEOUT)) {
 		dev_err(fdata->dfl_cdev->parent,
-			"timeout, fail to reset device\n");
+			"timeout, failure to disable device\n");
 		return -ETIMEDOUT;
 	}
 
@@ -125,9 +125,9 @@ static int __port_reset(struct dfl_feature_dev_data *fdata)
 
 	ret = __afu_port_disable(fdata);
 	if (!ret)
-		ret = __afu_port_enable(fdata);
+		return ret;
 
-	return ret;
+	return __afu_port_enable(fdata);
 }
 
 static int port_reset(struct platform_device *pdev)

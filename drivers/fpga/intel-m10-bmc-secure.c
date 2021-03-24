@@ -445,17 +445,15 @@ static enum fpga_sec_err m10bmc_sec_poll_complete(struct fpga_sec_mgr *smgr)
 	if (result != FPGA_SEC_ERR_NONE)
 		goto fw_state_exit;
 
-	ret = rsu_check_complete(sec, &doorbell);
 	poll_timeout = jiffies + msecs_to_jiffies(RSU_COMPLETE_TIMEOUT_MS);
-
-	while (ret == -EAGAIN && !time_after(jiffies, poll_timeout)) {
+	do {
 		msleep(RSU_COMPLETE_INTERVAL_MS);
 		ret = rsu_check_complete(sec, &doorbell);
 		if (smgr->driver_unload) {
 			result = FPGA_SEC_ERR_CANCELED;
 			goto fw_state_exit;
 		}
-	}
+	} while (ret == -EAGAIN && !time_after(jiffies, poll_timeout));
 
 	if (ret == -EAGAIN) {
 		log_error_regs(sec, doorbell);
@@ -497,7 +495,8 @@ static enum fpga_sec_err m10bmc_sec_cancel(struct fpga_sec_mgr *smgr)
 static u64 m10bmc_sec_hw_errinfo(struct fpga_sec_mgr *smgr)
 {
 	struct m10bmc_sec *sec = smgr->priv;
-	u32 doorbell, auth_result;
+	u32 auth_result = HW_ERRINFO_POISON;
+	u32 doorbell = HW_ERRINFO_POISON;
 
 	switch (smgr->err_code) {
 	case FPGA_SEC_ERR_HW_ERROR:
@@ -594,8 +593,8 @@ static int trigger_retimer_eeprom_load(struct m10bmc_sec *sec)
 				       M10BMC_SYS_BASE + M10BMC_DOORBELL,
 				       val,
 				       (!(val & DRBL_PKVL_EEPROM_LOAD_SEC)),
-				       PKVL_EEPROM_LOAD_INTERVAL_US,
-				       PKVL_EEPROM_LOAD_TIMEOUT_US);
+				       M10BMC_PKVL_LOAD_INTERVAL_US,
+				       M10BMC_PKVL_LOAD_TIMEOUT_US);
 	if (ret == -ETIMEDOUT) {
 		dev_err(sec->dev, "%s PKVL_EEPROM_LOAD clear timedout\n",
 			__func__);
@@ -629,8 +628,8 @@ static int poll_retimer_eeprom_load_done(struct m10bmc_sec *sec)
 					 RSU_PROG_PKVL_PROM_DONE) ||
 					(rsu_stat(doorbell) ==
 					 RSU_STAT_PKVL_REJECT)),
-				       PKVL_PRELOAD_INTERVAL_US,
-				       PKVL_PRELOAD_TIMEOUT_US);
+				       M10BMC_PKVL_PRELOAD_INTERVAL_US,
+				       M10BMC_PKVL_PRELOAD_TIMEOUT_US);
 	if (ret) {
 		if (ret == -ETIMEDOUT)
 			dev_err(sec->dev,
@@ -661,17 +660,17 @@ static int poll_retimer_preload_done(struct m10bmc_sec *sec)
 	 * and confirm that the updated firmware is operational
 	 */
 	ret = regmap_read_poll_timeout(m10bmc->regmap,
-				       M10BMC_SYS_BASE + PKVL_POLLING_CTRL, val,
-				       ((val & PKVL_PRELOAD) == PKVL_PRELOAD),
-				       PKVL_PRELOAD_INTERVAL_US,
-				       PKVL_PRELOAD_TIMEOUT_US);
+				       M10BMC_SYS_BASE + M10BMC_PKVL_POLL_CTRL, val,
+				       ((val & M10BMC_PKVL_PRELOAD) == M10BMC_PKVL_PRELOAD),
+				       M10BMC_PKVL_PRELOAD_INTERVAL_US,
+				       M10BMC_PKVL_PRELOAD_TIMEOUT_US);
 	if (ret) {
-		dev_err(sec->dev, "%s poll PKVL_PRELOAD error %d\n",
+		dev_err(sec->dev, "%s poll M10BMC_PKVL_PRELOAD error %d\n",
 			__func__, ret);
 		return ret;
 	}
 
-	if ((val & PKVL_UPG_STATUS_MASK) != PKVL_UPG_STATUS_GOOD) {
+	if ((val & M10BMC_PKVL_UPG_STATUS_MASK) != M10BMC_PKVL_UPG_STATUS_GOOD) {
 		dev_err(sec->dev, "%s error detected during upgrade\n",
 			__func__);
 		return -EIO;
@@ -710,12 +709,12 @@ fw_state_exit:
 
 static struct image_load n3000_image_load_hndlrs[] = {
 	{
-		.name = "bmc_user",
-		.load_image = m10bmc_sec_bmc_image_load_0,
-	},
-	{
 		.name = "bmc_factory",
 		.load_image = m10bmc_sec_bmc_image_load_1,
+	},
+	{
+		.name = "bmc_user",
+		.load_image = m10bmc_sec_bmc_image_load_0,
 	},
 	{
 		.name = "retimer_fw",

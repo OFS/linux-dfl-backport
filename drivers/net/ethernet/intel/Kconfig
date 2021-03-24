@@ -343,36 +343,6 @@ config IGC
 	  To compile this driver as a module, choose M here. The module
 	  will be called igc.
 
-config FPGA_DFL_ETH_GROUP
-        tristate "DFL Ether Group private feature support"
-        depends on FPGA_DFL && HAS_IOMEM
-        help
-          This driver supports DFL Ether Group private feature for
-	  Intel(R) PAC N3000 FPGA Smart NIC.
-
-	  The DFL Ether Group private feature contains several ether
-	  interfaces, each of them contains an Ether Wrapper and several
-	  ports (phy-mac pairs). There are two types of interfaces, Line
-	  side & CPU side. These 2 types of interfaces, together with FPGA
-	  internal logic, act as several independent pipes between the
-	  host Ethernet Controller and the front-panel cages. The FPGA
-	  logic between 2 interfaces implements user defined mac layer
-	  offloading.
-
-	  This driver implements each active port as a netdev.
-
-config INTEL_M10_BMC_RETIMER
-	tristate "Intel(R) MAX 10 BMC ethernet retimer support"
-	depends on MFD_INTEL_M10_BMC
-	select PHYLIB
-        help
-          This driver supports the ethernet retimer (Parkvale) on
-	  Intel(R) MAX 10 BMC, which is used by Intel PAC N3000 FPGA based
-	  Smart NIC.
-
-	  To compile this driver as a module, choose M here. The module
-	  will be called intel-m10-bmc-retimer.
-
 config S10HSSI
 	tristate "Control Plane Driver for Stratix 10 HSSI"
 	select REGMAP_INDIRECT_REGISTER
@@ -380,10 +350,10 @@ config S10HSSI
 	  This driver provides control plane support for an Stratix 10
 	  High Speed Serial Interface.
 
-          The Stratix 10 High Speed Serial Interface provides a data
-          path between the FPGA and the external QSFP interfaces.  This
-          data path does not involve packets transferred between host
-          memory and the fpga.  As such a very limited set of networking
-          functionality is provided.
+	  The Stratix 10 High Speed Serial Interface provides a data
+	  path between the FPGA and the external QSFP interfaces.  This
+	  data path does not involve packets transferred between host
+	  memory and the fpga.  As such a very limited set of networking
+	  functionality is provided.
 
 endif # NET_VENDOR_INTEL

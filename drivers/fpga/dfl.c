@@ -251,10 +251,6 @@ static int dfl_bus_match(struct device *dev, struct device_driver *drv)
 	struct dfl_driver *ddrv = to_dfl_drv(drv);
 	const struct dfl_device_id *id_entry;
 
-	/* When driver_override is set, only bind to the matching driver */
-	if (ddev->driver_override)
-		return !strcmp(ddev->driver_override, drv->name);
-
 	id_entry = ddrv->id_table;
 	if (id_entry) {
 		while (id_entry->feature_id) {
@@ -296,53 +292,6 @@ static int dfl_bus_uevent(struct device *dev, struct kobj_uevent_env *env)
 			      ddev->type, ddev->feature_id);
 }
 
-static ssize_t driver_override_show(struct device *dev,
-				    struct device_attribute *attr, char *buf)
-{
-	struct dfl_device *ddev = to_dfl_dev(dev);
-	ssize_t len;
-
-	device_lock(dev);
-	len = sysfs_emit(buf, "%s\n", ddev->driver_override);
-	device_unlock(dev);
-	return len;
-}
-
-static ssize_t driver_override_store(struct device *dev,
-				     struct device_attribute *attr,
-				     const char *buf, size_t count)
-{
-	struct dfl_device *ddev = to_dfl_dev(dev);
-	char *driver_override, *old, *cp;
-
-	/* We need to keep extra room for a newline */
-	if (count >= (PAGE_SIZE - 1))
-		return -EINVAL;
-
-	driver_override = kstrndup(buf, count, GFP_KERNEL);
-	if (!driver_override)
-		return -ENOMEM;
-
-	cp = strchr(driver_override, '\n');
-	if (cp)
-		*cp = '\0';
-
-	device_lock(dev);
-	old = ddev->driver_override;
-	if (strlen(driver_override)) {
-		ddev->driver_override = driver_override;
-	} else {
-		kfree(driver_override);
-		ddev->driver_override = NULL;
-	}
-	device_unlock(dev);
-
-	kfree(old);
-
-	return count;
-}
-static DEVICE_ATTR_RW(driver_override);
-
 static ssize_t
 type_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
@@ -364,7 +313,6 @@ static DEVICE_ATTR_RO(feature_id);
 static struct attribute *dfl_dev_attrs[] = {
 	&dev_attr_type.attr,
 	&dev_attr_feature_id.attr,
-	&dev_attr_driver_override.attr,
 	NULL,
 };
 ATTRIBUTE_GROUPS(dfl_dev);
@@ -510,7 +458,7 @@ err:
 
 int __dfl_driver_register(struct dfl_driver *dfl_drv, struct module *owner)
 {
-	if (!dfl_drv || !dfl_drv->probe)
+	if (!dfl_drv || !dfl_drv->probe || !dfl_drv->id_table)
 		return -EINVAL;
 
 	dfl_drv->drv.owner = owner;
@@ -525,36 +473,6 @@ void dfl_driver_unregister(struct dfl_driver *dfl_drv)
 	driver_unregister(&dfl_drv->drv);
 }
 EXPORT_SYMBOL(dfl_driver_unregister);
-
-int dfl_dev_get_vendor_net_cfg(struct dfl_device *dfl_dev)
-{
-	struct device *fme_dev;
-	u64 v;
-
-	if (!dfl_dev)
-		return -EINVAL;
-
-	if (dfl_dev->type == FME_ID)
-		fme_dev = dfl_dev->dev.parent;
-	else
-		fme_dev = dfl_dev->cdev->fme_dev;
-
-	if (!fme_dev)
-		return -EINVAL;
-
-	v = dfl_get_bitstream_id(fme_dev);
-	return (int)FIELD_GET(FME_BID_VENDOR_NET_CFG, v);
-}
-EXPORT_SYMBOL_GPL(dfl_dev_get_vendor_net_cfg);
-
-struct device *dfl_dev_get_base_dev(struct dfl_device *dfl_dev)
-{
-	if (!dfl_dev || !dfl_dev->cdev)
-		return NULL;
-
-	return dfl_dev->cdev->parent;
-}
-EXPORT_SYMBOL_GPL(dfl_dev_get_base_dev);
 
 #define is_header_feature(feature) ((feature)->id == FEATURE_ID_FIU_HEADER)
 

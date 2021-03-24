@@ -17,12 +17,13 @@ enum m10bmc_type {
 	M10_N5010,
 };
 
-#define M10BMC_LEGACY_SYS_BASE		0x300400
+#define M10BMC_LEGACY_BUILD_VER		0x300468
 #define M10BMC_SYS_BASE			0x300800
 #define M10BMC_SYS_END			0x300fff
-#define M10BMC_MEM_END			0x200000fc
-
 #define M10BMC_FLASH_BASE		0x10000000
+#define M10BMC_FLASH_END		0x1fffffff
+#define M10BMC_MEM_END			M10BMC_FLASH_END
+
 #define M10BMC_STAGING_BASE		0x18000000
 #define M10BMC_STAGING_SIZE		0x3800000
 
@@ -43,43 +44,36 @@ enum m10bmc_type {
 #define M10BMC_VER_PCB_INFO_MSK		GENMASK(31, 24)
 #define M10BMC_VER_LEGACY_INVALID	0xffffffff
 
-/* PKVL related registers, in system register region */
-#define PKVL_POLLING_CTRL		0x80
-#define POLLING_MODE			GENMASK(15, 0)
-#define PKVL_A_PRELOAD			BIT(16)
-#define PKVL_A_PRELOAD_TIMEOUT		BIT(17)
-#define PKVL_A_DATA_TOO_BIG		BIT(18)
-#define PKVL_A_HDR_CHECKSUM		BIT(20)
-#define PKVL_B_PRELOAD			BIT(24)
-#define PKVL_B_PRELOAD_TIMEOUT		BIT(25)
-#define PKVL_B_DATA_TOO_BIG		BIT(26)
-#define PKVL_B_HDR_CHECKSUM		BIT(28)
-#define PKVL_EEPROM_UPG_STATUS		GENMASK(31, 16)
-#define PKVL_LINK_STATUS		0x164
-#define PKVL_A_VERSION			0x254
-#define PKVL_B_VERSION			0x258
-#define SERDES_VERSION			GENMASK(15, 0)
-#define SBUS_VERSION			GENMASK(31, 16)
+/* Retimer related registers, in system register region */
+#define M10BMC_PKVL_POLL_CTRL		0x80
+#define M10BMC_PKVL_A_PRELOAD		BIT(16)
+#define M10BMC_PKVL_A_PRELOAD_TO	BIT(17)
+#define M10BMC_PKVL_A_DATA_TOO_BIG	BIT(18)
+#define M10BMC_PKVL_A_HDR_CKSUM	BIT(20)
+#define M10BMC_PKVL_B_PRELOAD		BIT(24)
+#define M10BMC_PKVL_B_PRELOAD_TO	BIT(25)
+#define M10BMC_PKVL_B_DATA_TOO_BIG	BIT(26)
+#define M10BMC_PKVL_B_HDR_CKSUM	BIT(28)
 
-#define PKVL_PRELOAD			(PKVL_A_PRELOAD | PKVL_B_PRELOAD)
-#define PKVL_PRELOAD_TIMEOUT		(PKVL_A_PRELOAD_TIMEOUT | \
-					 PKVL_B_PRELOAD_TIMEOUT)
-#define PKVL_DATA_TOO_BIG		(PKVL_A_DATA_TOO_BIG | \
-					 PKVL_B_DATA_TOO_BIG)
-#define PKVL_HDR_CHECKSUM		(PKVL_A_HDR_CHECKSUM | \
-					 PKVL_B_HDR_CHECKSUM)
+#define M10BMC_PKVL_PRELOAD		(M10BMC_PKVL_A_PRELOAD | M10BMC_PKVL_B_PRELOAD)
+#define M10BMC_PKVL_PRELOAD_TIMEOUT	(M10BMC_PKVL_A_PRELOAD_TO | \
+					 M10BMC_PKVL_B_PRELOAD_TO)
+#define M10BMC_PKVL_DATA_TOO_BIG	(M10BMC_PKVL_A_DATA_TOO_BIG | \
+					 M10BMC_PKVL_B_DATA_TOO_BIG)
+#define M10BMC_PKVL_HDR_CHECKSUM	(M10BMC_PKVL_A_HDR_CKSUM | \
+					 M10BMC_PKVL_B_HDR_CKSUM)
 
-#define PKVL_UPG_STATUS_MASK		(PKVL_PRELOAD | PKVL_PRELOAD_TIMEOUT |\
-					 PKVL_DATA_TOO_BIG | PKVL_HDR_CHECKSUM)
-#define PKVL_UPG_STATUS_GOOD		(PKVL_PRELOAD | PKVL_HDR_CHECKSUM)
+#define M10BMC_PKVL_UPG_STATUS_MASK	(M10BMC_PKVL_PRELOAD | M10BMC_PKVL_PRELOAD_TIMEOUT |\
+					 M10BMC_PKVL_DATA_TOO_BIG | M10BMC_PKVL_HDR_CHECKSUM)
+#define M10BMC_PKVL_UPG_STATUS_GOOD	(M10BMC_PKVL_PRELOAD | M10BMC_PKVL_HDR_CHECKSUM)
 
 /* interval 100ms and timeout 2s */
-#define PKVL_EEPROM_LOAD_INTERVAL_US	(100 * 1000)
-#define PKVL_EEPROM_LOAD_TIMEOUT_US	(2 * 1000 * 1000)
+#define M10BMC_PKVL_LOAD_INTERVAL_US	(100 * 1000)
+#define M10BMC_PKVL_LOAD_TIMEOUT_US	(2 * 1000 * 1000)
 
 /* interval 100ms and timeout 30s */
-#define PKVL_PRELOAD_INTERVAL_US	(100 * 1000)
-#define PKVL_PRELOAD_TIMEOUT_US		(30 * 1000 * 1000)
+#define M10BMC_PKVL_PRELOAD_INTERVAL_US	(100 * 1000)
+#define M10BMC_PKVL_PRELOAD_TIMEOUT_US	(30 * 1000 * 1000)
 
 /* Telemetry registers */
 #define M10BMC_N3000_TELEM_START	0x100
@@ -170,19 +164,6 @@ enum m10bmc_type {
 
 /* Address of 4KB inverted bit vector containing staging area FLASH count */
 #define STAGING_FLASH_COUNT	0x17ffb000
-
-/**
- * struct intel_m10bmc_retimer_pdata - subdev retimer platform data
- *
- * @retimer_master: the NIC device which connects to the retimers on m10bmc
- */
-struct intel_m10bmc_retimer_pdata {
-	struct device *retimer_master;
-};
-
-struct intel_m10bmc_platdata {
-	struct intel_m10bmc_retimer_pdata *retimer;
-};
 
 enum m10bmc_fw_state {
 	M10BMC_FW_STATE_NORMAL,

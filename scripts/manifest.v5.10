@@ -65,6 +65,8 @@ drivers/net/phy/Makefile
 drivers/spi/Kconfig
 drivers/spi/Makefile
 drivers/spi/spi-altera.c
+drivers/uio/Kconfig
+drivers/uio/Makefile
 include/linux/fpga/adi-axi-common.h
 include/linux/fpga/altera-pr-ip-core.h
 include/linux/fpga/fpga-bridge.h
