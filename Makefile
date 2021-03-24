@@ -118,6 +118,7 @@ $(rules_rmmod): rmmod_%:
 
 $(rules_insmod): insmod_%:
 	@if ! lsmod | grep -q $* && test -f $*.ko; then \
+		[ $* = uio-dfl ] && modprobe uio; \
 		insmod $*.ko $(DYNDBG); \
 	fi
 
