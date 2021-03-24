@@ -12,7 +12,7 @@
 #include <linux/phy.h>
 #include <linux/rtnetlink.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 6, 0) && RHEL_RELEASE_CODE < 0x805
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 6, 0) && RHEL_RELEASE_CODE < 0x803
 extern struct mii_bus *mdio_find_bus(const char *mdio_name);
 #endif
 
