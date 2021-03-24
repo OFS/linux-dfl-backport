@@ -22,8 +22,13 @@ import() {
 }
 
 apply() {
-  git rev-list --reverse --first-parent --no-merges --invert-grep --grep REVERTME --grep DEBUG $range | \
-    git cherry-pick --strategy recursive --strategy-option no-renames --stdin
+    git cherry-pick \
+      --strategy recursive \
+      --strategy-option no-renames \
+      --first-parent \
+      --no-merges \
+      --invert-grep --grep REVERTME --grep DEBUG \
+      $range
 }
 
 remote mainline git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
