@@ -11,6 +11,38 @@
 #include <linux/module.h>
 #include <linux/spinlock.h>
 #include <linux/uio_driver.h>
+#include <linux/version.h>
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 7, 0)
+
+static void devm_uio_unregister_device(struct device *dev, void *res)
+{
+	uio_unregister_device(*(struct uio_info **)res);
+}
+
+static int devm_uio_register_device(struct device *parent, struct uio_info *info)
+{
+	struct uio_info **ptr;
+	int ret;
+
+	ptr = devres_alloc(devm_uio_unregister_device, sizeof(*ptr),
+			GFP_KERNEL);
+	if (!ptr)
+		return -ENOMEM;
+
+	*ptr = info;
+	ret = __uio_register_device(THIS_MODULE, parent, info);
+	if (ret) {
+		devres_free(ptr);
+		return ret;
+	}
+
+	devres_add(parent, ptr);
+
+	return 0;
+}
+
+#endif /* < KERNEL_VERSION(5, 7, 0) */
 
 #define DRIVER_NAME "uio_dfl"
 
