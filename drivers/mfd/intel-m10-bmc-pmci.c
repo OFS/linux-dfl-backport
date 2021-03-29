@@ -11,6 +11,7 @@
 #include <linux/mfd/intel-m10-bmc.h>
 #include <linux/module.h>
 #include <linux/regmap.h>
+#include <linux/version.h>
 
 #define M10BMC_PMCI_INDIRECT_BASE 0x400
 
@@ -161,6 +162,9 @@ static int pmci_probe(struct dfl_device *ddev)
 	struct fpga_flash_ops *pmci_flash_ops;
 	struct device *dev = &ddev->dev;
 	struct pmci_device *pmci;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
+	int ret;
+#endif
 
 	pmci = devm_kzalloc(dev, sizeof(*pmci), GFP_KERNEL);
 	if (!pmci)
@@ -190,6 +194,12 @@ static int pmci_probe(struct dfl_device *ddev)
 	if (IS_ERR(pmci->m10bmc.regmap))
 		return PTR_ERR(pmci->m10bmc.regmap);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
+	ret = device_add_groups(dev, m10bmc_dev_groups);
+	if (ret)
+		return ret;
+#endif
+
 	return m10bmc_dev_init(&pmci->m10bmc);
 }
 
@@ -211,7 +221,9 @@ MODULE_DEVICE_TABLE(dfl, pmci_ids);
 static struct dfl_driver pmci_driver = {
 	.drv	= {
 		.name       = "intel-m10-bmc",
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= 0x803
 		.dev_groups = m10bmc_dev_groups,
+#endif
 	},
 	.id_table = pmci_ids,
 	.probe    = pmci_probe,
