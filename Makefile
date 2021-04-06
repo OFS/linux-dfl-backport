@@ -20,6 +20,10 @@ endif
 
 export BACKPORT_VERSION
 
+ifndef CONFIG_REGMAP_MMIO
+obj-m += regmap-mmio.o
+endif
+
 # modules to build (in insmod order)
 obj-m += regmap-spi-avmm.o
 obj-m += fpga-mgr.o
@@ -49,6 +53,7 @@ obj-m += n5010-phy.o
 obj-m += n5010-hssi.o
 obj-m += dfl-pci.o
 
+regmap-mmio-y := drivers/base/regmap/regmap-mmio.o
 regmap-spi-avmm-y := drivers/base/regmap/regmap-spi-avmm.o
 dfl-y := drivers/fpga/dfl.o
 
