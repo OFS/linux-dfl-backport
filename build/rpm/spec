@@ -20,7 +20,7 @@ version of the current dfl support.
 
 %install
 install -d %{_pkgdir}
-cp -a Makefile drivers include %{_pkgdir}
+cp -a build/dkms/generate-dkms-conf.sh Makefile drivers include %{_pkgdir}
 sed -E 's/PACKAGE_VERSION=".+"/PACKAGE_VERSION="%{version}-%{release}"/' build/dkms/dkms.conf > %{_pkgdir}/dkms.conf
 install -d $(dirname %{buildroot}%{_dracut})
 echo 'omit_drivers+="%_modules"' > %{buildroot}%{_dracut}

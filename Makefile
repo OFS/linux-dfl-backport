@@ -126,6 +126,10 @@ rmmod: $(rules_rmmod)
 insmod: $(rules_insmod)
 reload: rmmod insmod
 
+# helper used to generate dynamic dkms config based on kernel config
+dkms:
+	@echo $(modules)
+
 # build rpm packages
 rpm: build/rpm/spec clean
 	@rpmbuild $(RPMBUILDOPTS) $<
