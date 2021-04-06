@@ -485,15 +485,6 @@ EXPORT_SYMBOL_GPL(dfl_dev_get_base_dev);
 
 #define is_header_feature(feature) ((feature)->id == FEATURE_ID_FIU_HEADER)
 
-struct device *dfl_dev_get_base_dev(struct dfl_device *dfl_dev)
-{
-	if (!dfl_dev || !dfl_dev->cdev)
-		return NULL;
-
-	return dfl_dev->cdev->parent;
-}
-EXPORT_SYMBOL(dfl_dev_get_base_dev);
-
 /**
  * dfl_fpga_dev_feature_uinit - uinit for sub features of dfl feature device
  * @pdev: feature device.
