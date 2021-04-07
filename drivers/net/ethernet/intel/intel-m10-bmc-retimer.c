@@ -45,7 +45,7 @@ static void retimers_remove(struct m10bmc_retimer *retimer) {
 	mutex_unlock(&retimers_mutex);
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 6, 0) && RHEL_RELEASE_CODE < 0x805
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 6, 0) && RHEL_RELEASE_CODE < 0x803
 struct mii_bus *mdio_find_bus(const char *mdio_name) {
 	struct mii_bus *ret = NULL;
 	struct m10bmc_retimer *retimer;
