@@ -167,19 +167,6 @@ enum m10bmc_type {
 /* Address of 4KB inverted bit vector containing staging area FLASH count */
 #define STAGING_FLASH_COUNT	0x17ffb000
 
-/**
- * struct intel_m10bmc_retimer_pdata - subdev retimer platform data
- *
- * @retimer_master: the NIC device which connects to the retimers on m10bmc
- */
-struct intel_m10bmc_retimer_pdata {
-	struct device *retimer_master;
-};
-
-struct intel_m10bmc_platdata {
-	struct intel_m10bmc_retimer_pdata *retimer;
-};
-
 enum m10bmc_fw_state {
 	M10BMC_FW_STATE_NORMAL,
 	M10BMC_FW_STATE_SEC_UPDATE,
