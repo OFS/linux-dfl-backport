@@ -39,7 +39,6 @@ obj-m += intel-m10-bmc.o
 obj-m += intel-m10-bmc-hwmon.o
 obj-m += intel-m10-bmc-secure.o
 obj-m += regmap-indirect-register.o
-obj-m += intel-m10-bmc-retimer.o
 obj-m += dfl-eth-group.o
 obj-m += s10hssi.o
 obj-m += n5010-phy.o
@@ -78,7 +77,6 @@ intel-s10-phy-y := drivers/net/phy/intel-s10-phy.o
 intel-m10-bmc-y := drivers/mfd/intel-m10-bmc.o
 intel-m10-bmc-hwmon-y := drivers/hwmon/intel-m10-bmc-hwmon.o
 intel-m10-bmc-secure-y := drivers/fpga/intel-m10-bmc-secure.o
-intel-m10-bmc-retimer-y := drivers/net/ethernet/intel/intel-m10-bmc-retimer.o
 
 dfl-eth-group-y := drivers/net/ethernet/intel/dfl-eth-group-main.o
 dfl-eth-group-y += drivers/net/ethernet/intel/dfl-eth-group-10g.o
