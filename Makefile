@@ -32,7 +32,6 @@ obj-m += dfl-fme-br.o
 obj-m += dfl-spi-altera.o
 obj-m += dfl-hssi.o
 obj-m += dfl-n3000-nios.o
-obj-m += dfl-uio-pdev.o
 obj-m += dfl-emif.o
 obj-m += spi-altera.o
 obj-m += intel-s10-phy.o
@@ -40,11 +39,10 @@ obj-m += intel-m10-bmc.o
 obj-m += intel-m10-bmc-hwmon.o
 obj-m += intel-m10-bmc-secure.o
 obj-m += regmap-indirect-register.o
-obj-m += intel-m10-bmc-retimer.o
-obj-m += dfl-eth-group.o
 obj-m += s10hssi.o
 obj-m += n5010-phy.o
 obj-m += n5010-hssi.o
+obj-m += uio_dfl.o
 obj-m += dfl-pci.o
 
 regmap-spi-avmm-y := drivers/base/regmap/regmap-spi-avmm.o
@@ -68,7 +66,6 @@ dfl-pci-y := drivers/fpga/dfl-pci.o
 dfl-spi-altera-y := drivers/fpga/dfl-spi-altera.o
 dfl-hssi-y := drivers/fpga/dfl-hssi.o
 dfl-n3000-nios-y := drivers/fpga/dfl-n3000-nios.o
-dfl-uio-pdev-y := drivers/fpga/dfl-uio-pdev.o
 dfl-emif-y := drivers/memory/dfl-emif.o
 spi-altera-y := drivers/spi/spi-altera.o
 fpga-bridge-y := drivers/fpga/fpga-bridge.o
@@ -79,16 +76,12 @@ intel-s10-phy-y := drivers/net/phy/intel-s10-phy.o
 intel-m10-bmc-y := drivers/mfd/intel-m10-bmc.o
 intel-m10-bmc-hwmon-y := drivers/hwmon/intel-m10-bmc-hwmon.o
 intel-m10-bmc-secure-y := drivers/fpga/intel-m10-bmc-secure.o
-intel-m10-bmc-retimer-y := drivers/net/ethernet/intel/intel-m10-bmc-retimer.o
-
-dfl-eth-group-y := drivers/net/ethernet/intel/dfl-eth-group-main.o
-dfl-eth-group-y += drivers/net/ethernet/intel/dfl-eth-group-10g.o
-dfl-eth-group-y += drivers/net/ethernet/intel/dfl-eth-group-25g.o
 
 s10hssi-y := drivers/net/ethernet/intel/s10hssi.o
 regmap-indirect-register-y := drivers/base/regmap/regmap-indirect-register.o
 n5010-phy-y := drivers/net/ethernet/silicom/n5010-phy.o
 n5010-hssi-y := drivers/net/ethernet/silicom/n5010-hssi.o
+uio_dfl-y := drivers/uio/uio_dfl.o
 
 # intermediates used when reversing modules list
 count := $(words $(obj-m))

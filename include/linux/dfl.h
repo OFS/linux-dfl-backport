@@ -5,8 +5,8 @@
  * Copyright (C) 2020 Intel Corporation, Inc.
  */
 
-#ifndef __LINUX_FPGA_DFL_H
-#define __LINUX_FPGA_DFL_H
+#ifndef __LINUX_DFL_H
+#define __LINUX_DFL_H
 
 #include <linux/bitfield.h>
 #include <linux/device.h>
@@ -34,7 +34,6 @@ enum dfl_id_type {
  * @num_irqs: number of IRQs supported by this dfl device.
  * @cdev: pointer to DFL FPGA container device this dfl device belongs to.
  * @id_entry: matched id entry in dfl driver's id table.
- * @driver_override: driver name to force a match
  */
 struct dfl_device {
 	struct device dev;
@@ -46,7 +45,6 @@ struct dfl_device {
 	unsigned int num_irqs;
 	struct dfl_fpga_cdev *cdev;
 	const struct dfl_device_id *id_entry;
-	char *driver_override;
 };
 
 /**
@@ -69,7 +67,6 @@ struct dfl_driver {
 #define to_dfl_dev(d) container_of(d, struct dfl_device, dev)
 #define to_dfl_drv(d) container_of(d, struct dfl_driver, drv)
 
-int dfl_dev_get_vendor_net_cfg(struct dfl_device *dfl_dev);
 struct device *dfl_dev_get_base_dev(struct dfl_device *dfl_dev);
 
 /*
@@ -140,4 +137,4 @@ static inline u8 dfl_feature_revision(void __iomem *base)
 	return (u8)FIELD_GET(DFH_REVISION, readq(base + DFH));
 }
 
-#endif /* __LINUX_FPGA_DFL_H */
+#endif /* __LINUX_DFL_H */
