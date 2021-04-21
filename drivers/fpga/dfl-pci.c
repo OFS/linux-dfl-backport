@@ -74,7 +74,8 @@ static void cci_pci_free_irq(struct pci_dev *pcidev)
 #define PCIE_DEVICE_ID_PF_DSC_1_X		0x09C4
 #define PCIE_DEVICE_ID_INTEL_PAC_N3000		0x0B30
 #define PCIE_DEVICE_ID_INTEL_PAC_D5005		0x0B2B
-#define PCIE_DEVCIE_ID_INTEL_OFS		0xaf00
+#define PCIE_DEVCIE_ID_INTEL_AF00		0xaf00
+#define PCIE_DEVCIE_ID_INTEL_OFS		0xbcce
 #define PCIE_DEVICE_ID_SILICOM_PAC_N5010	0x1000
 #define PCIE_DEVICE_ID_SILICOM_PAC_N5011	0x1001
 
@@ -94,6 +95,7 @@ static struct pci_device_id cci_pcie_id_tbl[] = {
 	{PCI_DEVICE(PCI_VENDOR_ID_INTEL, PCIE_DEVICE_ID_INTEL_PAC_N3000),},
 	{PCI_DEVICE(PCI_VENDOR_ID_INTEL, PCIE_DEVICE_ID_INTEL_PAC_D5005),},
 	{PCI_DEVICE(PCI_VENDOR_ID_INTEL, PCIE_DEVICE_ID_INTEL_PAC_D5005_VF),},
+	{PCI_DEVICE(PCI_VENDOR_ID_INTEL, PCIE_DEVCIE_ID_INTEL_AF00),},
 	{PCI_DEVICE(PCI_VENDOR_ID_INTEL, PCIE_DEVCIE_ID_INTEL_OFS),},
 	{PCI_DEVICE(PCI_VENDOR_ID_SILICOM_DENMARK, PCIE_DEVICE_ID_SILICOM_PAC_N5010),},
 	{PCI_DEVICE(PCI_VENDOR_ID_SILICOM_DENMARK, PCIE_DEVICE_ID_SILICOM_PAC_N5011),},
@@ -219,6 +221,7 @@ static int find_dfls_by_default(struct pci_dev *pcidev,
 	int port_num, bar, i, ret = 0;
 	resource_size_t start, len;
 	void __iomem *base;
+	int bars = 0;
 	u32 offset;
 	u64 v;
 
@@ -235,6 +238,7 @@ static int find_dfls_by_default(struct pci_dev *pcidev,
 	if (dfl_feature_is_fme(base)) {
 		start = pci_resource_start(pcidev, 0);
 		len = pci_resource_len(pcidev, 0);
+		bars |= BIT(0);
 
 		dfl_fpga_enum_info_add_dfl(info, start, len);
 
@@ -260,9 +264,21 @@ static int find_dfls_by_default(struct pci_dev *pcidev,
 			 */
 			bar = FIELD_GET(FME_PORT_OFST_BAR_ID, v);
 			offset = FIELD_GET(FME_PORT_OFST_DFH_OFST, v);
-			start = pci_resource_start(pcidev, bar) + offset;
-			len = pci_resource_len(pcidev, bar) - offset;
+			if (bars & BIT(bar)) {
+				dev_warn(&pcidev->dev, "skipping bad port BAR %d\n", bar);
+				continue;
+			}
 
+			start = pci_resource_start(pcidev, bar) + offset;
+			len = pci_resource_len(pcidev, bar);
+			if (offset >= len) {
+				dev_warn(&pcidev->dev, "bad port offset %u >= %pa\n",
+					 offset, &len);
+				continue;
+			}
+
+			len -= offset;
+			bars |= BIT(bar);
 			dfl_fpga_enum_info_add_dfl(info, start, len);
 		}
 	} else if (dfl_feature_is_port(base)) {
