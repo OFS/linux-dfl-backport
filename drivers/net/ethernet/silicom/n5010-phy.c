@@ -232,4 +232,4 @@ module_platform_driver(n5010_phy_driver);
 MODULE_DEVICE_TABLE(platform, n5010_phy_ids);
 MODULE_AUTHOR("Intel Corporation");
 MODULE_DESCRIPTION("Intel MAX10 BMC phy driver for n5010");
-MODULE_LICENSE("GPL");
+MODULE_LICENSE("GPL v2");
