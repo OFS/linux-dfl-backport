@@ -11,37 +11,27 @@
 #include <linux/module.h>
 #include <linux/spinlock.h>
 #include <linux/uio_driver.h>
+#include <linux/version.h>
 
-#define DRIVER_NAME "uio_dfl"
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 7, 0)
 
-#ifndef devm_uio_register_device
 static void devm_uio_unregister_device(struct device *dev, void *res)
 {
 	uio_unregister_device(*(struct uio_info **)res);
 }
 
-/**
- * __devm_uio_register_device - Resource managed uio_register_device()
- * @owner:	module that creates the new device
- * @parent:	parent device
- * @info:	UIO device capabilities
- *
- * returns zero on success or a negative error code.
- */
-static int __devm_uio_register_device(struct module *owner,
-				      struct device *parent,
-				      struct uio_info *info)
+static int devm_uio_register_device(struct device *parent, struct uio_info *info)
 {
 	struct uio_info **ptr;
 	int ret;
 
 	ptr = devres_alloc(devm_uio_unregister_device, sizeof(*ptr),
-			   GFP_KERNEL);
+			GFP_KERNEL);
 	if (!ptr)
 		return -ENOMEM;
 
 	*ptr = info;
-	ret = __uio_register_device(owner, parent, info);
+	ret = __uio_register_device(THIS_MODULE, parent, info);
 	if (ret) {
 		devres_free(ptr);
 		return ret;
@@ -52,18 +42,9 @@ static int __devm_uio_register_device(struct module *owner,
 	return 0;
 }
 
-/* use a define to avoid include chaining to get THIS_MODULE */
+#endif /* < KERNEL_VERSION(5, 7, 0) */
 
-/**
- * devm_uio_register_device - Resource managed uio_register_device()
- * @parent:	parent device
- * @info:	UIO device capabilities
- *
- * returns zero on success or a negative error code.
- */
-#define devm_uio_register_device(parent, info) \
-	__devm_uio_register_device(THIS_MODULE, parent, info)
-#endif
+#define DRIVER_NAME "uio_dfl"
 
 struct uio_dfl_dev {
 	struct device *dev;
