@@ -81,7 +81,6 @@ intel-s10-phy-y := drivers/net/phy/intel-s10-phy.o
 intel-m10-bmc-y := drivers/mfd/intel-m10-bmc.o
 intel-m10-bmc-hwmon-y := drivers/hwmon/intel-m10-bmc-hwmon.o
 intel-m10-bmc-secure-y := drivers/fpga/intel-m10-bmc-secure.o
-
 s10hssi-y := drivers/net/ethernet/intel/s10hssi.o
 regmap-indirect-register-y := drivers/base/regmap/regmap-indirect-register.o
 n5010-phy-y := drivers/net/ethernet/silicom/n5010-phy.o
