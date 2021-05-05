@@ -9,8 +9,4 @@
 #define PCI_VENDOR_ID_SILICOM_DENMARK	0x1c2c
 #endif
 
-#ifndef PCI_STD_NUM_BARS
-#define PCI_STD_NUM_BARS       6       /* Number of standard BARs */
-#endif
-
 #endif
