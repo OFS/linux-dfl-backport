@@ -118,17 +118,14 @@ clean:
 $(rules_rmmod): rmmod_%:
 	@if lsmod | grep -qE '\<$*\>'; then rmmod $*; fi
 
-# Needed for uio_dfl
-modprobe_uio:
-	@modprobe uio
-
 $(rules_insmod): insmod_%:
 	@if ! lsmod | grep -q $* && test -f $*.ko; then \
+		[ $* = uio-dfl ] && modprobe uio; \
 		insmod $*.ko $(DYNDBG); \
 	fi
 
 rmmod: $(rules_rmmod)
-insmod: modprobe_uio $(rules_insmod)
+insmod: $(rules_insmod)
 reload: rmmod insmod
 
 # helper used to generate dynamic dkms config based on kernel config
