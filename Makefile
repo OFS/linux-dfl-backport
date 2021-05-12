@@ -140,7 +140,7 @@ dkms:
 	@echo $(modules)
 
 # build rpm packages
-rpm: build/rpm/spec clean
+rpm: build/rpm/linux-dfl-backport.spec clean
 	@rpmbuild $(RPMBUILDOPTS) $<
 
 help:
