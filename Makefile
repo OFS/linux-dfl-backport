@@ -164,4 +164,4 @@ help:
 	@echo "Test Arguments:"
 	@echo " DEBUG=<0|1>	Toggle dynamic debugging when inserting modules (0)"
 
-.PHONY: all install clean rmmod insmod reload rpm help
+.PHONY: all install clean rmmod insmod reload rpm help dkms
