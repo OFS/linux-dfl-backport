@@ -2,10 +2,15 @@ KERNEL ?= $(shell uname -r)
 KERNELDIR ?= /lib/modules/$(KERNEL)/build
 LINUXINCLUDE := -I$(src)/include -I$(src)/include/uapi $(LINUXINCLUDE)
 
-RPMBUILDOPTS := -bb --build-in-place \
-                --define '_topdir /tmp/rpmbuild' \
-                --define '_rpmdir .' \
-                --define '_build_name_fmt %%{NAME}-%%{VERSION}-%%{RELEASE}.%%{ARCH}.rpm'
+ifeq ($(DEBUG),1)
+DYNDBG = dyndbg=+p
+endif
+
+RPMBUILDOPTS = -bb --build-in-place \
+               --define '_topdir /tmp/rpmbuild' \
+               --define '_rpmdir .' \
+               --define '_build_name_fmt %%{NAME}-%%{VERSION}-%%{RELEASE}.%%{ARCH}.rpm' \
+               --define '_modules $(reverse)'
 
 ifeq ($(BACKPORT_VERSION),)
 BACKPORT_VERSION := $(shell git describe --always --tags --dirty --long | sed -E 's/^v//;s/([^-]*-g)/r\1/;s/-/./g;s/\.rc/rc/')
@@ -76,7 +81,6 @@ intel-s10-phy-y := drivers/net/phy/intel-s10-phy.o
 intel-m10-bmc-y := drivers/mfd/intel-m10-bmc.o
 intel-m10-bmc-hwmon-y := drivers/hwmon/intel-m10-bmc-hwmon.o
 intel-m10-bmc-secure-y := drivers/fpga/intel-m10-bmc-secure.o
-
 s10hssi-y := drivers/net/ethernet/intel/s10hssi.o
 regmap-indirect-register-y := drivers/base/regmap/regmap-indirect-register.o
 n5010-phy-y := drivers/net/ethernet/silicom/n5010-phy.o
@@ -109,6 +113,7 @@ install:
 # remove build artifacts
 clean:
 	@$(MAKE) -C $(KERNELDIR) M=$(CURDIR) clean
+	@-rm *.rpm
 
 $(rules_rmmod): rmmod_%:
 	@if lsmod | grep -qE '\<$*\>'; then rmmod $*; fi
@@ -119,15 +124,19 @@ modprobe_uio:
 
 $(rules_insmod): insmod_%:
 	@if ! lsmod | grep -q $* && test -f $*.ko; then \
-		insmod $*.ko; \
+		insmod $*.ko $(DYNDBG); \
 	fi
 
 rmmod: $(rules_rmmod)
 insmod: modprobe_uio $(rules_insmod)
 reload: rmmod insmod
 
+# helper used to generate dynamic dkms config based on kernel config
+dkms:
+	@echo $(modules)
+
 # build rpm packages
-rpm: build/rpm/spec clean
+rpm: build/rpm/linux-dfl-backport.spec clean
 	@rpmbuild $(RPMBUILDOPTS) $<
 
 help:
@@ -137,7 +146,7 @@ help:
 	@echo " make clean	Remove build artifacts"
 	@echo ""
 	@echo "Package Usage:"
-	@echo "	make rpm	Build rpm package from source"
+	@echo " make rpm	Build rpm package from source"
 	@echo ""
 	@echo "Test Usage:"
 	@echo " make rmmod	Remove modules from running kernel"
@@ -147,5 +156,8 @@ help:
 	@echo "Build Arguments:"
 	@echo " KERNEL		Kernel version to build against ($$(uname -r))"
 	@echo " KERNELDIR	Path to kernel build dir (/lib/modules/<KERNEL>/build)"
+	@echo ""
+	@echo "Test Arguments:"
+	@echo " DEBUG=<0|1>	Toggle dynamic debugging when inserting modules (0)"
 
-.PHONY: all install clean rmmod insmod reload rpm help
+.PHONY: all install clean rmmod insmod reload rpm help dkms
