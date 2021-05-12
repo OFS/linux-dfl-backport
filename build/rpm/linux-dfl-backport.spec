@@ -1,7 +1,7 @@
 Name:               linux-dfl-backport
 Version:            %{getenv:BACKPORT_VERSION}
 Release:            1
-Summary:            Backported kernel modules for in-development linux fpga dfl modules
+Summary:            Backported fpga drivers from linux-dfl
 License:            GPLv2
 Group:              System/Kernel and hardware
 URL:                https://github.com/OPAE/linux-dfl-backport/
@@ -13,10 +13,8 @@ Requires:           dkms, (kernel-devel if kernel), (kernel-rt-devel if kernel-r
 %define _dracut %{_prefix}/lib/dracut/dracut.conf.d/90-linux-dfl-backport.conf
 
 %description
-Device Feature List (dfl) is used by FPGAs to communicate features
-supported by a given loaded firmware/bitstream. Since dfl support in the
-Linux kernel has yet to materialize, this package contains a backported
-version of the current dfl support.
+A backport of DFL FPGA drivers from the current LTS branch of
+https://github.com/OPAE/linux-dfl-backport/.
 
 %install
 install -d %{_pkgdir}
