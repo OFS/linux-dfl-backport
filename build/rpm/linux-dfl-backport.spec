@@ -4,7 +4,7 @@ Release:            1
 Summary:            Backported kernel modules for in-development linux fpga dfl modules
 License:            GPLv2+
 Group:              System/Kernel and hardware
-URL:                https://github.com/OPAE/linux-dfl/
+URL:                https://github.com/OPAE/linux-dfl-backport/
 BuildArch:          noarch
 Requires:           dkms, (kernel-devel if kernel), (kernel-rt-devel if kernel-rt)
 
