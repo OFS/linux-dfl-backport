@@ -2,7 +2,7 @@ Name:               linux-dfl-backport
 Version:            %{getenv:BACKPORT_VERSION}
 Release:            1
 Summary:            Backported kernel modules for in-development linux fpga dfl modules
-License:            GPLv2+
+License:            GPLv2
 Group:              System/Kernel and hardware
 URL:                https://github.com/OPAE/linux-dfl-backport/
 BuildArch:          noarch
