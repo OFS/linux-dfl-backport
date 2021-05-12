@@ -146,7 +146,7 @@ help:
 	@echo " make clean	Remove build artifacts"
 	@echo ""
 	@echo "Package Usage:"
-	@echo "	make rpm	Build rpm package from source"
+	@echo " make rpm	Build rpm package from source"
 	@echo ""
 	@echo "Test Usage:"
 	@echo " make rmmod	Remove modules from running kernel"
@@ -158,6 +158,6 @@ help:
 	@echo " KERNELDIR	Path to kernel build dir (/lib/modules/<KERNEL>/build)"
 	@echo ""
 	@echo "Test Arguments:"
-	@echo " DEBUG=<0|1>	Toggl dynamic debug when inserting modules (0)
+	@echo " DEBUG=<0|1>	Toggle dynamic debugging when inserting modules (0)"
 
 .PHONY: all install clean rmmod insmod reload rpm help
