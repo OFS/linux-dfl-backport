@@ -113,6 +113,7 @@ install:
 # remove build artifacts
 clean:
 	@$(MAKE) -C $(KERNELDIR) M=$(CURDIR) clean
+	@-rm *.rpm
 
 $(rules_rmmod): rmmod_%:
 	@if lsmod | grep -qE '\<$*\>'; then rmmod $*; fi
