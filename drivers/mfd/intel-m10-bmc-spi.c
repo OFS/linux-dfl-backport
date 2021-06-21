@@ -11,6 +11,7 @@
 #include <linux/module.h>
 #include <linux/regmap.h>
 #include <linux/spi/spi.h>
+#include <linux/version.h>
 
 static const struct regmap_range m10bmc_regmap_range[] = {
 	regmap_reg_range(M10BMC_LEGACY_BUILD_VER, M10BMC_LEGACY_BUILD_VER),
@@ -57,6 +58,12 @@ static int intel_m10_bmc_spi_probe(struct spi_device *spi)
 
 	spi_set_drvdata(spi, ddata);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+	ret = device_add_groups(dev, m10bmc_dev_groups);
+	if (ret)
+		return ret;
+#endif
+
 	return m10bmc_dev_init(ddata);
 }
 
@@ -71,7 +78,9 @@ MODULE_DEVICE_TABLE(spi, m10bmc_spi_id);
 static struct spi_driver intel_m10bmc_spi_driver = {
 	.driver = {
 		.name = "intel-m10-bmc",
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
 		.dev_groups = m10bmc_dev_groups,
+#endif
 	},
 	.probe = intel_m10_bmc_spi_probe,
 	.id_table = m10bmc_spi_id,
