@@ -8,6 +8,7 @@ MAINTAINERS
 drivers/base/regmap/Kconfig
 drivers/base/regmap/Makefile
 drivers/base/regmap/internal.h
+drivers/base/regmap/regmap-debugfs.c
 drivers/base/regmap/regmap-mmio.c
 drivers/base/regmap/regmap-spi-avmm.c
 drivers/fpga/Kconfig
