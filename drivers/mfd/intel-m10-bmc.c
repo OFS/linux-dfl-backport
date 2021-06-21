@@ -12,7 +12,6 @@
 #include <linux/mutex.h>
 #include <linux/regmap.h>
 #include <linux/spi/spi.h>
-#include <linux/version.h>
 
 static struct mfd_cell m10bmc_d5005_subdevs[] = {
 	{ .name = "d5005bmc-hwmon" },
@@ -312,10 +311,6 @@ static int intel_m10_bmc_spi_probe(struct spi_device *spi)
 	if (ret)
 		dev_err(dev, "Failed to register sub-devices: %d\n", ret);
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
-	ret = device_add_groups(dev, m10bmc_groups);
-#endif
-
 	return ret;
 }
 
@@ -330,9 +325,7 @@ MODULE_DEVICE_TABLE(spi, m10bmc_spi_id);
 static struct spi_driver intel_m10bmc_spi_driver = {
 	.driver = {
 		.name = "intel-m10-bmc",
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= 0x803
 		.dev_groups = m10bmc_groups,
-#endif
 	},
 	.probe = intel_m10_bmc_spi_probe,
 	.id_table = m10bmc_spi_id,
