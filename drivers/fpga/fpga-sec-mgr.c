@@ -21,8 +21,6 @@ struct fpga_sec_mgr_devres {
 	struct fpga_sec_mgr *smgr;
 };
 
-#define WRITE_BLOCK_SIZE 0x4000	/* Update remaining_size every 0x4000 bytes */
-
 #define to_sec_mgr(d) container_of(d, struct fpga_sec_mgr, dev)
 
 static void update_progress(struct fpga_sec_mgr *smgr,
@@ -32,13 +30,13 @@ static void update_progress(struct fpga_sec_mgr *smgr,
 	sysfs_notify(&smgr->dev.kobj, "update", "status");
 }
 
-static void set_error(struct fpga_sec_mgr *smgr, enum fpga_sec_err err_code)
+static void fpga_sec_set_error(struct fpga_sec_mgr *smgr, enum fpga_sec_err err_code)
 {
 	smgr->err_state = smgr->progress;
 	smgr->err_code = err_code;
 }
 
-static void set_hw_errinfo(struct fpga_sec_mgr *smgr)
+static void fpga_sec_set_hw_errinfo(struct fpga_sec_mgr *smgr)
 {
 	if (smgr->sops->get_hw_errinfo)
 		smgr->hw_errinfo = smgr->sops->get_hw_errinfo(smgr);
@@ -47,8 +45,8 @@ static void set_hw_errinfo(struct fpga_sec_mgr *smgr)
 static void fpga_sec_dev_error(struct fpga_sec_mgr *smgr,
 			       enum fpga_sec_err err_code)
 {
-	set_error(smgr, err_code);
-	set_hw_errinfo(smgr);
+	fpga_sec_set_error(smgr, err_code);
+	fpga_sec_set_hw_errinfo(smgr);
 	smgr->sops->cancel(smgr);
 }
 
@@ -59,7 +57,7 @@ static int progress_transition(struct fpga_sec_mgr *smgr,
 
 	mutex_lock(&smgr->lock);
 	if (smgr->request_cancel) {
-		set_error(smgr, FPGA_SEC_ERR_CANCELED);
+		fpga_sec_set_error(smgr, FPGA_SEC_ERR_CANCELED);
 		smgr->sops->cancel(smgr);
 		ret = -ECANCELED;
 	} else {
@@ -79,16 +77,16 @@ static void progress_complete(struct fpga_sec_mgr *smgr)
 
 static void fpga_sec_mgr_update(struct work_struct *work)
 {
-	u32 size, blk_size, offset = 0;
 	struct fpga_sec_mgr *smgr;
 	const struct firmware *fw;
 	enum fpga_sec_err ret;
+	u32 offset = 0;
 
 	smgr = container_of(work, struct fpga_sec_mgr, work);
 
 	get_device(&smgr->dev);
 	if (request_firmware(&fw, smgr->filename, &smgr->dev)) {
-		set_error(smgr, FPGA_SEC_ERR_FILE_READ);
+		fpga_sec_set_error(smgr, FPGA_SEC_ERR_FILE_READ);
 		goto idle_exit;
 	}
 
@@ -96,7 +94,7 @@ static void fpga_sec_mgr_update(struct work_struct *work)
 	smgr->remaining_size = fw->size;
 
 	if (!try_module_get(smgr->dev.parent->driver->owner)) {
-		set_error(smgr, FPGA_SEC_ERR_BUSY);
+		fpga_sec_set_error(smgr, FPGA_SEC_ERR_BUSY);
 		goto release_fw_exit;
 	}
 
@@ -112,18 +110,14 @@ static void fpga_sec_mgr_update(struct work_struct *work)
 	if (progress_transition(smgr, FPGA_SEC_PROG_WRITING))
 		goto done;
 
-	size = smgr->remaining_size;
-	while (size && !smgr->request_cancel) {
-		blk_size = min_t(u32, size, WRITE_BLOCK_SIZE);
-		size -= blk_size;
-		ret = smgr->sops->write_blk(smgr, offset, blk_size);
+	while (smgr->remaining_size && !smgr->request_cancel) {
+		ret = smgr->sops->write_blk(smgr, offset);
 		if (ret != FPGA_SEC_ERR_NONE) {
 			fpga_sec_dev_error(smgr, ret);
 			goto done;
 		}
 
-		smgr->remaining_size = size;
-		offset += blk_size;
+		offset = fw->size - smgr->remaining_size;
 	}
 
 	if (progress_transition(smgr, FPGA_SEC_PROG_PROGRAMMING))
@@ -157,23 +151,23 @@ idle_exit:
 }
 
 static const char * const sec_mgr_prog_str[] = {
-	"idle",			/* FPGA_SEC_PROG_IDLE */
-	"reading",		/* FPGA_SEC_PROG_READING */
-	"preparing",		/* FPGA_SEC_PROG_PREPARING */
-	"writing",		/* FPGA_SEC_PROG_WRITING */
-	"programming"		/* FPGA_SEC_PROG_PROGRAMMING */
+	[FPGA_SEC_PROG_IDLE]	    = "idle",
+	[FPGA_SEC_PROG_READING]	    = "reading",
+	[FPGA_SEC_PROG_PREPARING]   = "preparing",
+	[FPGA_SEC_PROG_WRITING]	    = "writing",
+	[FPGA_SEC_PROG_PROGRAMMING] = "programming"
 };
 
 static const char * const sec_mgr_err_str[] = {
-	"none",			/* FPGA_SEC_ERR_NONE */
-	"hw-error",		/* FPGA_SEC_ERR_HW_ERROR */
-	"timeout",		/* FPGA_SEC_ERR_TIMEOUT */
-	"user-abort",		/* FPGA_SEC_ERR_CANCELED */
-	"device-busy",		/* FPGA_SEC_ERR_BUSY */
-	"invalid-file-size",	/* FPGA_SEC_ERR_INVALID_SIZE */
-	"read-write-error",	/* FPGA_SEC_ERR_RW_ERROR */
-	"flash-wearout",	/* FPGA_SEC_ERR_WEAROUT */
-	"file-read-error"	/* FPGA_SEC_ERR_FILE_READ */
+	[FPGA_SEC_ERR_NONE]	    = "none",
+	[FPGA_SEC_ERR_HW_ERROR]	    = "hw-error",
+	[FPGA_SEC_ERR_TIMEOUT]	    = "timeout",
+	[FPGA_SEC_ERR_CANCELED]	    = "user-abort",
+	[FPGA_SEC_ERR_BUSY]	    = "device-busy",
+	[FPGA_SEC_ERR_INVALID_SIZE] = "invalid-file-size",
+	[FPGA_SEC_ERR_RW_ERROR]	    = "read-write-error",
+	[FPGA_SEC_ERR_WEAROUT]	    = "flash-wearout",
+	[FPGA_SEC_ERR_FILE_READ]    = "file-read-error"
 };
 
 static const char *sec_progress(struct device *dev, enum fpga_sec_prog prog)
@@ -266,7 +260,7 @@ static ssize_t filename_store(struct device *dev, struct device_attribute *attr,
 	struct fpga_sec_mgr *smgr = to_sec_mgr(dev);
 	int ret = count;
 
-	if (count == 0 || count >= PATH_MAX)
+	if (!count || count >= PATH_MAX)
 		return -EINVAL;
 
 	mutex_lock(&smgr->lock);
@@ -437,7 +431,7 @@ fpga_sec_mgr_create(struct device *dev, const char *name,
 
 	if (!sops || !sops->cancel || !sops->prepare ||
 	    !sops->write_blk || !sops->poll_complete) {
-		dev_err(dev, "Attempt to register without required ops\n");
+		dev_err(dev, "Attempt to register without all required ops\n");
 		return NULL;
 	}
 
@@ -469,6 +463,8 @@ fpga_sec_mgr_create(struct device *dev, const char *name,
 	smgr->name = name;
 	smgr->priv = priv;
 	smgr->sops = sops;
+	smgr->err_code = FPGA_SEC_ERR_NONE;
+	smgr->progress = FPGA_SEC_PROG_IDLE;
 	init_completion(&smgr->update_done);
 	INIT_WORK(&smgr->work, fpga_sec_mgr_update);
 
@@ -592,7 +588,7 @@ EXPORT_SYMBOL_GPL(fpga_sec_mgr_register);
  * For some devices, once the secure update has begun authentication
  * the hardware cannot be signaled to stop, and the driver will not
  * exit until the hardware signals completion.  This could be 30+
- * minutes of waiting. The driver_unload flag enableds a force-unload
+ * minutes of waiting. The driver_unload flag enables a force-unload
  * of the driver (e.g. modprobe -r) by signaling the parent driver to
  * exit even if the hardware update is incomplete. The driver_unload
  * flag also prevents new updates from starting once the unregister

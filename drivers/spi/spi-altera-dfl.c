@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0
-/*
- * DFL bus driver for Altera SPI Master
- *
- * Copyright (C) 2020 Intel Corporation, Inc.
- *
- * Authors:
- *   Matthew Gerlach <matthew.gerlach@linux.intel.com>
- */
+//
+// DFL bus driver for Altera SPI Master
+//
+// Copyright (C) 2020 Intel Corporation, Inc.
+//
+// Authors:
+//   Matthew Gerlach <matthew.gerlach@linux.intel.com>
+//
 
 #include <linux/types.h>
 #include <linux/kernel.h>
@@ -22,17 +22,8 @@
 #include <linux/spi/altera.h>
 #include <linux/dfl.h>
 
-#include "dfl.h"
-
 #define FME_FEATURE_ID_MAX10_SPI	0xe
 #define FME_FEATURE_REV_MAX10_SPI_N5010	0x1
-
-struct dfl_altera_spi {
-	void __iomem *base;
-	struct regmap *regmap;
-	struct device *dev;
-	struct platform_device *altr_spi;
-};
 
 #define SPI_CORE_PARAMETER      0x8
 #define SHIFT_MODE              BIT_ULL(1)
@@ -58,8 +49,7 @@ struct dfl_altera_spi {
 static int indirect_bus_reg_read(void *context, unsigned int reg,
 				 unsigned int *val)
 {
-	struct dfl_altera_spi *aspi = context;
-	void __iomem *base = aspi->base;
+	void __iomem *base = context;
 	int loops;
 	u64 v;
 
@@ -85,8 +75,7 @@ static int indirect_bus_reg_read(void *context, unsigned int reg,
 static int indirect_bus_reg_write(void *context, unsigned int reg,
 				  unsigned int val)
 {
-	struct dfl_altera_spi *aspi = context;
-	void __iomem *base = aspi->base;
+	void __iomem *base = context;
 	int loops;
 
 	writeq(val, base + INDIRECT_WR_DATA);
@@ -129,88 +118,81 @@ static struct spi_board_info m10_n5010_bmc_info = {
 	.chip_select = 0,
 };
 
-static struct platform_device *create_cntrl(struct device *dev,
-					    void __iomem *base,
-					    struct spi_board_info *m10_info)
+static void config_spi_master(void __iomem *base, struct spi_master *master)
 {
-	struct altera_spi_platform_data pdata;
-	struct platform_device_info pdevinfo;
 	u64 v;
 
 	v = readq(base + SPI_CORE_PARAMETER);
 
-	memset(&pdata, 0, sizeof(pdata));
-	pdata.mode_bits = SPI_CS_HIGH;
+	master->mode_bits = SPI_CS_HIGH;
 	if (FIELD_GET(CLK_POLARITY, v))
-		pdata.mode_bits |= SPI_CPOL;
+		master->mode_bits |= SPI_CPOL;
 	if (FIELD_GET(CLK_PHASE, v))
-		pdata.mode_bits |= SPI_CPHA;
+		master->mode_bits |= SPI_CPHA;
 
-	pdata.num_chipselect = FIELD_GET(NUM_CHIPSELECT, v);
-	pdata.bits_per_word_mask =
+	master->num_chipselect = FIELD_GET(NUM_CHIPSELECT, v);
+	master->bits_per_word_mask =
 		SPI_BPW_RANGE_MASK(1, FIELD_GET(DATA_WIDTH, v));
-
-	pdata.num_devices = 1;
-	pdata.devices = m10_info;
-
-	dev_dbg(dev, "%s cs %u bpm 0x%x mode 0x%x\n", __func__,
-		pdata.num_chipselect, pdata.bits_per_word_mask,
-		pdata.mode_bits);
-
-	memset(&pdevinfo, 0, sizeof(pdevinfo));
-
-	pdevinfo.name = "subdev_spi_altera";
-	pdevinfo.id = PLATFORM_DEVID_AUTO;
-	pdevinfo.parent = dev;
-	pdevinfo.data = &pdata;
-	pdevinfo.size_data = sizeof(pdata);
-
-	return platform_device_register_full(&pdevinfo);
 }
+
 static int dfl_spi_altera_probe(struct dfl_device *dfl_dev)
 {
 	struct device *dev = &dfl_dev->dev;
-	struct dfl_altera_spi *aspi;
+	struct spi_board_info *spi_info;
+	struct spi_master *master;
+	struct altera_spi *hw;
+	void __iomem *base;
+	int err = -ENODEV;
 
-	aspi = devm_kzalloc(dev, sizeof(*aspi), GFP_KERNEL);
-
-	if (!aspi)
+	master = spi_alloc_master(dev, sizeof(struct altera_spi));
+	if (!master)
 		return -ENOMEM;
 
-	dev_set_drvdata(dev, aspi);
+	master->bus_num = dfl_dev->id;
 
-	aspi->dev = dev;
+	hw = spi_master_get_devdata(master);
 
-	aspi->base = devm_ioremap_resource(dev, &dfl_dev->mmio_res);
+	hw->dev = dev;
 
-	if (IS_ERR(aspi->base)) {
+	base = devm_ioremap_resource(dev, &dfl_dev->mmio_res);
+
+	if (IS_ERR(base)) {
 		dev_err(dev, "%s get mem resource fail!\n", __func__);
-		return PTR_ERR(aspi->base);
+		return PTR_ERR(base);
 	}
 
-	aspi->regmap = devm_regmap_init(dev, NULL, aspi, &indirect_regbus_cfg);
-	if (IS_ERR(aspi->regmap))
-		return PTR_ERR(aspi->regmap);
+	config_spi_master(base, master);
+	dev_dbg(dev, "%s cs %u bpm 0x%x mode 0x%x\n", __func__,
+		master->num_chipselect, master->bits_per_word_mask,
+		master->mode_bits);
 
-	if (dfl_feature_revision(aspi->base) == FME_FEATURE_REV_MAX10_SPI_N5010)
-		aspi->altr_spi = create_cntrl(dev, aspi->base, &m10_n5010_bmc_info);
+	hw->regmap = devm_regmap_init(dev, NULL, base, &indirect_regbus_cfg);
+	if (IS_ERR(hw->regmap))
+		return PTR_ERR(hw->regmap);
+
+	hw->irq = -EINVAL;
+
+	altera_spi_init_master(master);
+
+	err = devm_spi_register_master(dev, master);
+	if (err) {
+		dev_err(dev, "%s failed to register spi master %d\n", __func__, err);
+		goto exit;
+	}
+
+	if (dfl_feature_revision(base) == FME_FEATURE_REV_MAX10_SPI_N5010)
+		spi_info = &m10_n5010_bmc_info;
 	else
-		aspi->altr_spi = create_cntrl(dev, aspi->base, &m10_bmc_info);
+		spi_info = &m10_bmc_info;
 
-	if (IS_ERR(aspi->altr_spi)) {
-		dev_err(dev, "%s failed to create spi platform driver\n",
-			__func__);
-		return PTR_ERR(aspi->base);
-	}
+	if (!spi_new_device(master,  spi_info))
+		dev_err(dev, "%s failed to create SPI device: %s\n",
+			__func__, spi_info->modalias);
 
 	return 0;
-}
-
-static void dfl_spi_altera_remove(struct dfl_device *dfl_dev)
-{
-	struct dfl_altera_spi *aspi = dev_get_drvdata(&dfl_dev->dev);
-
-	platform_device_unregister(aspi->altr_spi);
+exit:
+	spi_master_put(master);
+	return err;
 }
 
 static const struct dfl_device_id dfl_spi_altera_ids[] = {
@@ -224,7 +206,6 @@ static struct dfl_driver dfl_spi_altera_driver = {
 	},
 	.id_table = dfl_spi_altera_ids,
 	.probe   = dfl_spi_altera_probe,
-	.remove  = dfl_spi_altera_remove,
 };
 
 module_dfl_driver(dfl_spi_altera_driver);
