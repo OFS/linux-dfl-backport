@@ -210,12 +210,6 @@ void altera_spi_init_master(struct spi_master *master)
 	master->transfer_one = altera_spi_txrx;
 	master->set_cs = altera_spi_set_cs;
 
-#ifdef RHEL_RELEASE
-		/* RHEL does not export regm_regmap_init_mmio */
-		err = -ENOTSUPP;
-		goto exit;
-#else
-#endif
 	/* program defaults into the registers */
 	hw->imr = 0;		/* disable spi interrupts */
 	altr_spi_writel(hw, ALTERA_SPI_CONTROL, hw->imr);
