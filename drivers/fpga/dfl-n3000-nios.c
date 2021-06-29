@@ -597,6 +597,7 @@ static struct dfl_driver n3000_nios_driver = {
 
 module_dfl_driver(n3000_nios_driver);
 
+MODULE_ALIAS("dfl:t0000f000D");
 MODULE_DESCRIPTION("Driver for Nios private feature on Intel PAC N3000");
 MODULE_AUTHOR("Intel Corporation");
 MODULE_LICENSE("GPL v2");
