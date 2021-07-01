@@ -7,7 +7,7 @@
 #include <linux/mm.h>
 #include_next <linux/sysfs.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0) && RHEL_RELEASE_CODE < 0x803
 /**
  *	sysfs_emit - scnprintf equivalent, aware of PAGE_SIZE buffer
  *	@buf:	start of PAGE_SIZE buffer.
