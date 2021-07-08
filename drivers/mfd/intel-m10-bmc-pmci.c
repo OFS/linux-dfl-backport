@@ -233,5 +233,6 @@ static struct dfl_driver pmci_driver = {
 module_dfl_driver(pmci_driver);
 
 MODULE_DESCRIPTION("MAX10 BMC PMCI-based interface");
+MODULE_ALIAS("dfl:t0000f0012");
 MODULE_AUTHOR("Intel Corporation");
 MODULE_LICENSE("GPL v2");
