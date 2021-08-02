@@ -920,9 +920,11 @@ static void build_info_free(struct build_feature_devs_info *binfo)
 {
 	struct dfl_feature_info *finfo, *p;
 
-	list_for_each_entry_safe(finfo, p, &binfo->sub_features, node) {
-		list_del(&finfo->node);
-		kfree(finfo);
+	if (!list_empty(&binfo->sub_features)) {
+		list_for_each_entry_safe(finfo, p, &binfo->sub_features, node) {
+			list_del(&finfo->node);
+			kfree(finfo);
+		}
 	}
 
 	devm_kfree(binfo->dev, binfo);
@@ -1004,9 +1006,12 @@ static int parse_feature_irqs(struct build_feature_devs_info *binfo,
 		fid, ibase, inr);
 
 	if (ibase + inr > binfo->nr_irqs) {
-		dev_err(binfo->dev,
-			"Invalid interrupt number in feature 0x%x\n", fid);
-		return -EINVAL;
+		dev_warn(binfo->dev,
+			 "Ignoring nvalid interrupt number in feature 0x%x %d > %d\n\n",
+			 fid, ibase + inr, binfo->nr_irqs);
+		*irq_base = 0;
+		*nr_irqs = 0;
+		return 0;
 	}
 
 	for (i = 0; i < inr; i++) {
@@ -1442,6 +1447,7 @@ dfl_fpga_feature_devs_enumerate(struct dfl_fpga_enum_info *info)
 	binfo->type = DFL_ID_MAX;
 	binfo->dev = info->dev;
 	binfo->cdev = cdev;
+	INIT_LIST_HEAD(&binfo->sub_features);
 
 	binfo->nr_irqs = info->nr_irqs;
 	if (info->nr_irqs)
@@ -1451,12 +1457,14 @@ dfl_fpga_feature_devs_enumerate(struct dfl_fpga_enum_info *info)
 	 * start enumeration for all feature devices based on Device Feature
 	 * Lists.
 	 */
-	list_for_each_entry(dfl, &info->dfls, node) {
-		ret = parse_feature_list(binfo, dfl->start, dfl->len);
-		if (ret) {
-			remove_feature_devs(cdev);
-			build_info_free(binfo);
-			goto unregister_region_exit;
+	if (!list_empty(&info->dfls)) {
+		list_for_each_entry(dfl, &info->dfls, node) {
+			ret = parse_feature_list(binfo, dfl->start, dfl->len);
+			if (ret) {
+				remove_feature_devs(cdev);
+				build_info_free(binfo);
+				goto unregister_region_exit;
+			}
 		}
 	}
 
@@ -1686,17 +1694,24 @@ EXPORT_SYMBOL_GPL(dfl_fpga_cdev_config_ports_pf);
 int dfl_fpga_cdev_config_ports_vf(struct dfl_fpga_cdev *cdev, int num_vfs)
 {
 	struct dfl_feature_dev_data *fdata;
-	int ret = 0;
+	int ret = 0, port_count = 0;
 
 	mutex_lock(&cdev->lock);
 	if (list_empty(&cdev->port_dev_list))
 		goto done;
+
+	list_for_each_entry(fdata, &cdev->port_dev_list, node) {
+		if (fdata->dev)
+			continue;
+		port_count++;
+	}
+
 	/*
 	 * can't turn multiple ports into 1 VF device, only 1 port for 1 VF
 	 * device, so if released port number doesn't match VF device number,
 	 * then reject the request with -EINVAL error code.
 	 */
-	if (cdev->released_port_num != num_vfs) {
+	if (port_count && (cdev->released_port_num != num_vfs)) {
 		ret = -EINVAL;
 		goto done;
 	}
