@@ -162,6 +162,16 @@ static int fme_mgr_write_init(struct fpga_manager *mgr,
 	return 0;
 }
 
+static inline void pr_data_write(u64 val, void __iomem *addr)
+{
+#ifdef CONFIG_64BIT
+	__raw_writeq(val, addr);
+#else
+	__raw_writel(val >> 32, addr + 4);
+	__raw_writel(val, addr);
+#endif
+}
+
 static int fme_mgr_write(struct fpga_manager *mgr,
 			 const char *buf, size_t count)
 {
@@ -169,7 +179,8 @@ static int fme_mgr_write(struct fpga_manager *mgr,
 	struct fme_mgr_priv *priv = mgr->priv;
 	void __iomem *fme_pr = priv->ioaddr;
 	u64 pr_ctrl, pr_status, pr_data;
-	int delay = 0, pr_credit, i = 0;
+	int delay = 0, pr_credit;
+	size_t chunk_size;
 
 	dev_dbg(dev, "start request\n");
 
@@ -200,18 +211,15 @@ static int fme_mgr_write(struct fpga_manager *mgr,
 			pr_credit = FIELD_GET(FME_PR_STS_PR_CREDIT, pr_status);
 		}
 
-		if (count < 4) {
-			dev_err(dev, "Invalid PR bitstream size\n");
-			return -EINVAL;
-		}
+		chunk_size = min_t(size_t, count, 4);
 
 		pr_data = 0;
-		pr_data |= FIELD_PREP(FME_PR_DATA_PR_DATA_RAW,
-				      *(((u32 *)buf) + i));
-		writeq(pr_data, fme_pr + FME_PR_DATA);
-		count -= 4;
+		memcpy(&pr_data, buf, chunk_size);
+		pr_data_write(pr_data, fme_pr + FME_PR_DATA);
+
+		buf += chunk_size;
+		count -= chunk_size;
 		pr_credit--;
-		i++;
 	}
 
 	return 0;
