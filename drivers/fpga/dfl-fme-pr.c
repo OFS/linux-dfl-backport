@@ -74,7 +74,6 @@ static int fme_pr(struct platform_device *pdev, unsigned long arg)
 	struct dfl_fme *fme;
 	unsigned long minsz;
 	void *buf = NULL;
-	size_t length;
 	int ret = 0;
 	u64 v;
 
@@ -97,13 +96,10 @@ static int fme_pr(struct platform_device *pdev, unsigned long arg)
 		return -EINVAL;
 	}
 
-	/*
-	 * align PR buffer per PR bandwidth, as HW ignores the extra padding
-	 * data automatically.
-	 */
-	length = ALIGN(port_pr.buffer_size, 4);
+	if (port_pr.buffer_size == 0)
+		return -EINVAL;
 
-	buf = vmalloc(length);
+	buf = vmalloc(port_pr.buffer_size);
 	if (!buf)
 		return -ENOMEM;
 
@@ -140,7 +136,7 @@ static int fme_pr(struct platform_device *pdev, unsigned long arg)
 	fpga_image_info_free(region->info);
 
 	info->buf = buf;
-	info->count = length;
+	info->count = port_pr.buffer_size;
 	info->region_id = port_pr.port_id;
 	region->info = info;
 
@@ -166,6 +162,7 @@ free_exit:
  * dfl_fme_create_mgr - create fpga mgr platform device as child device
  *
  * @pdata: fme platform_device's pdata
+ * @feature: the dfl fme PR sub feature
  *
  * Return: mgr platform device if successful, and error code otherwise.
  */
@@ -273,7 +270,7 @@ static void dfl_fme_destroy_bridge(struct dfl_fme_bridge *fme_br)
 }
 
 /**
- * dfl_fme_destroy_bridge - destroy all fpga bridge platform device
+ * dfl_fme_destroy_bridges - destroy all fpga bridge platform devices
  * @pdata: fme platform device's pdata
  */
 static void dfl_fme_destroy_bridges(struct dfl_feature_platform_data *pdata)
