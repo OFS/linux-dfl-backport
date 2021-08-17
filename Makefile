@@ -28,7 +28,10 @@ obj-m += regmap-mmio.o
 endif
 
 # modules to build (in insmod order)
+ifndef CONFIG_REGMAP_SPI_AVMM
 obj-m += regmap-spi-avmm.o
+endif
+
 obj-m += fpga-mgr.o
 obj-m += fpga-bridge.o
 obj-m += fpga-region.o
