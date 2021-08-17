@@ -17,7 +17,6 @@
 #include <linux/spi/spi.h>
 #include <linux/io.h>
 #include <linux/of.h>
-#include <linux/version.h>
 
 #define DRV_NAME "spi_altera"
 
