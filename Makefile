@@ -49,7 +49,7 @@ obj-m += regmap-indirect-register.o
 obj-m += s10hssi.o
 obj-m += n5010-phy.o
 obj-m += n5010-hssi.o
-obj-m += uio_dfl.o
+obj-m += uio-dfl.o
 obj-m += dfl-pci.o
 
 regmap-spi-avmm-y := drivers/base/regmap/regmap-spi-avmm.o
@@ -87,7 +87,7 @@ s10hssi-y := drivers/net/ethernet/intel/s10hssi.o
 regmap-indirect-register-y := drivers/base/regmap/regmap-indirect-register.o
 n5010-phy-y := drivers/net/ethernet/silicom/n5010-phy.o
 n5010-hssi-y := drivers/net/ethernet/silicom/n5010-hssi.o
-uio_dfl-y := drivers/uio/uio_dfl.o
+uio-dfl-y := drivers/uio/uio_dfl.o
 
 # intermediates used when reversing modules list
 count := $(words $(obj-m))
