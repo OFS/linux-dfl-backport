@@ -142,6 +142,7 @@ static struct dfl_driver qsfp_driver = {
 };
 
 module_dfl_driver(qsfp_driver);
+MODULE_ALIAS("dfl:t0000f0013");
 MODULE_DEVICE_TABLE(dfl, qsfp_ids);
 MODULE_DESCRIPTION("Intel(R) Memory based QSFP driver");
 MODULE_AUTHOR("Intel Corporation");
