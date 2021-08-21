@@ -10,7 +10,6 @@
 #include <linux/mfd/core.h>
 #include <linux/mfd/intel-m10-bmc.h>
 #include <linux/module.h>
-#include <linux/version.h>
 
 static const struct m10bmc_csr m10bmc_pmci_csr = {
 	.base = M10BMC_PMCI_SYS_BASE,
@@ -329,7 +328,9 @@ const struct attribute_group *m10bmc_dev_groups[] = {
 	&m10bmc_group,
 	NULL,
 };
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,3)
 EXPORT_SYMBOL_GPL(m10bmc_dev_groups);
+#endif
 
 static int check_m10bmc_version(struct intel_m10bmc *ddata)
 {
@@ -424,16 +425,13 @@ int m10bmc_dev_init(struct intel_m10bmc *m10bmc)
 		dev_err(m10bmc->dev, "Failed to register sub-devices: %d\n",
 			ret);
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
-	ret = device_add_groups(dev, m10bmc_groups);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8,3)
+	ret = device_add_groups(m10bmc->dev, m10bmc_dev_groups);
 #endif
-
 	return ret;
 }
 EXPORT_SYMBOL_GPL(m10bmc_dev_init);
 
 MODULE_DESCRIPTION("Intel MAX 10 BMC core MFD driver");
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= 0x803
-#endif
 MODULE_AUTHOR("Intel Corporation");
 MODULE_LICENSE("GPL v2");

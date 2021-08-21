@@ -211,7 +211,9 @@ MODULE_DEVICE_TABLE(dfl, pmci_ids);
 static struct dfl_driver pmci_driver = {
 	.drv	= {
 		.name       = "intel-m10-bmc",
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,3)
 		.dev_groups = m10bmc_dev_groups,
+#endif
 	},
 	.id_table = pmci_ids,
 	.probe    = pmci_probe,
