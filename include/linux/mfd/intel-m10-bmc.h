@@ -10,11 +10,14 @@
 #include <linux/regmap.h>
 #include <linux/rwsem.h>
 
+struct intel_m10bmc;
+
 /* Supported MAX10 BMC types */
 enum m10bmc_type {
 	M10_N3000,
 	M10_D5005,
 	M10_N5010,
+	M10_N6010
 };
 
 #define M10BMC_LEGACY_BUILD_VER		0x300468
@@ -29,12 +32,12 @@ enum m10bmc_type {
 
 /* Register offset of system registers */
 #define NIOS2_FW_VERSION		0x0
-#define M10BMC_MACADDR1			0x10
+#define M10BMC_MAC_LOW			0x10
 #define M10BMC_MAC_BYTE4		GENMASK(7, 0)
 #define M10BMC_MAC_BYTE3		GENMASK(15, 8)
 #define M10BMC_MAC_BYTE2		GENMASK(23, 16)
 #define M10BMC_MAC_BYTE1		GENMASK(31, 24)
-#define M10BMC_MACADDR2			0x14
+#define M10BMC_MAC_HIGH			0x14
 #define M10BMC_MAC_BYTE6		GENMASK(7, 0)
 #define M10BMC_MAC_BYTE5		GENMASK(15, 8)
 #define M10BMC_MAC_COUNT		GENMASK(23, 16)
@@ -165,24 +168,160 @@ enum m10bmc_type {
 /* Address of 4KB inverted bit vector containing staging area FLASH count */
 #define STAGING_FLASH_COUNT	0x17ffb000
 
+#define M10BMC_PMCI_SYS_BASE 0x0
+#define M10BMC_PMCI_SYS_END  0xfff
+
+/* Telemetry registers */
+#define M10BMC_PMCI_TELEM_START		0x400
+#define M10BMC_PMCI_TELEM_END		0x78c
+
+#define M10BMC_PMCI_BUILD_VER   0x0
+#define NIOS2_PMCI_FW_VERSION   0x4
+#define M10BMC_PMCI_MAC_LOW    0x20
+#define M10BMC_PMCI_MAC_HIGH    0x24
+
+#define M10BMC_PMCI_FLASH_CTRL 0x1d0
+#define FLASH_MUX_SELECTION GENMASK(2, 0)
+#define FLASH_MUX_IDLE 0
+#define FLASH_MUX_NIOS 1
+#define FLASH_MUX_HOST 2
+#define FLASH_MUX_PFL  4
+#define get_flash_mux(mux)      FIELD_GET(FLASH_MUX_SELECTION, mux)
+
+#define FLASH_NIOS_REQUEST BIT(4)
+#define FLASH_HOST_REQUEST BIT(5)
+
+#define M10BMC_PMCI_DOORBELL 0x1c0
+#define PMCI_DRBL_REBOOT_DISABLED BIT(1)
+
+#define M10BMC_PMCI_AUTH_RESULT 0x1c4
+
+#define M10_FLASH_INT_US       1
+#define M10_FLASH_TIMEOUT_US   10000
+
+#define M10BMC_PMCI_MAX10_RECONF 0xfc
+#define PMCI_MAX10_REBOOT_REQ BIT(0)
+#define PMCI_MAX10_REBOOT_PAGE BIT(1)
+
+#define M10BMC_PMCI_FPGA_POC	0xb0
+#define PMCI_FPGA_POC		BIT(0)
+#define PMCI_NIOS_REQ_CLEAR	BIT(1)
+#define PMCI_NIOS_STATUS	GENMASK(5, 4)
+#define NIOS_STATUS_IDLE	0
+#define NIOS_STATUS_SUCCESS	1
+#define NIOS_STATUS_FAIL	2
+#define PMCI_USER_IMAGE_PAGE	GENMASK(10, 8)
+#define POC_USER_IMAGE_1	1
+#define POC_USER_IMAGE_2	2
+#define PMCI_FACTORY_IMAGE_SEL	BIT(31)
+
+#define M10BMC_PMCI_FPGA_RECONF 0xb8
+#define PMCI_FPGA_RECONF_PAGE  GENMASK(22, 20)
+#define PMCI_FPGA_RP_LOAD      BIT(23)
+
+#define M10BMC_PMCI_FPGA_CONF_STS 0xa0
+#define PMCI_FPGA_BOOT_PAGE  GENMASK(2, 0)
+#define PMCI_FPGA_CONFIGED   BIT(3)
+
+/* Addresses for security related data in FLASH */
+#define PMCI_BMC_REH_ADDR 0x7ffc004
+#define PMCI_BMC_PROG_ADDR 0x7ffc000
+#define PMCI_BMC_PROG_MAGIC 0x5746
+
+#define PMCI_SR_REH_ADDR  0x7ffd004
+#define PMCI_SR_PROG_ADDR  0x7ffd000
+#define PMCI_SR_PROG_MAGIC  0x5253
+
+#define PMCI_PR_REH_ADDR  0x7ffe004
+#define PMCI_PR_PROG_ADDR 0x7ffe000
+#define PMCI_PR_PROG_MAGIC 0x5250
+
+#define m10bmc_base(m10bmc) ((m10bmc)->csr->base)
+#define doorbell_reg(m10bmc) ((m10bmc)->csr->doorbell)
+#define auth_result_reg(m10bmc) ((m10bmc)->csr->auth_result)
+
+#define bmc_prog_addr(m10bmc) ((m10bmc)->csr->bmc_prog_addr)
+#define bmc_reh_addr(m10bmc) ((m10bmc)->csr->bmc_reh_addr)
+#define bmc_magic(m10bmc) ((m10bmc)->csr->bmc_magic)
+#define sr_prog_addr(m10bmc) ((m10bmc)->csr->sr_prog_addr)
+#define sr_reh_addr(m10bmc) ((m10bmc)->csr->sr_reh_addr)
+#define sr_magic(m10bmc) ((m10bmc)->csr->sr_magic)
+#define pr_prog_addr(m10bmc) ((m10bmc)->csr->pr_prog_addr)
+#define pr_reh_addr(m10bmc) ((m10bmc)->csr->pr_reh_addr)
+#define pr_magic(m10bmc) ((m10bmc)->csr->pr_magic)
+
 enum m10bmc_fw_state {
 	M10BMC_FW_STATE_NORMAL,
 	M10BMC_FW_STATE_SEC_UPDATE,
 };
 
 /**
+ * struct m10bmc_csr - Intel MAX 10 BMC CSR register
+ */
+struct m10bmc_csr {
+	unsigned int base;
+	unsigned int build_version;
+	unsigned int fw_version;
+	unsigned int mac_low;
+	unsigned int mac_high;
+	unsigned int doorbell;
+	unsigned int auth_result;
+	unsigned int bmc_prog_addr;
+	unsigned int bmc_reh_addr;
+	unsigned int bmc_magic;
+	unsigned int sr_prog_addr;
+	unsigned int sr_reh_addr;
+	unsigned int sr_magic;
+	unsigned int pr_prog_addr;
+	unsigned int pr_reh_addr;
+	unsigned int pr_magic;
+};
+
+/**
+ * struct fpga_flash_ops - device specific operations for flash R/W
+ * @write_blk: write a block of data to flash
+ * @read_blk: read a block of data from flash
+ * @mux_lock: Prevent concurrent flash burst reads
+ */
+struct fpga_flash_ops {
+	int (*write_blk)(struct intel_m10bmc *m10bmc, void *buf, u32 size);
+	int (*read_blk)(struct intel_m10bmc *m10bmc, void *buf, u32 addr, u32 size);
+	struct mutex mux_lock;	/* Prevent concurrent flash burst reads */
+};
+
+/**
+ * struct m10bmc_ops - device specific operations
+ * @flash_read: read a block of data from flash
+ */
+struct m10bmc_ops {
+	int (*flash_read)(struct intel_m10bmc *m10bmc, void *buf,
+			  u32 addr, u32 size);
+};
+
+/**
  * struct intel_m10bmc - Intel MAX 10 BMC parent driver data structure
  * @dev: this device
  * @regmap: the regmap used to access registers by m10bmc itself
- * @bmcfw_state: BMC firmware running state.
+ * @bmcfw_lock: read/write semaphore to BMC firmware running state
+ * @bmcfw_state: BMC firmware running state
+ * @type: the type of MAX10 BMC
+ * @handshake_sys_reg_ranges: array of register ranges for fw handshake regs
+ * @handshake_sys_reg_nranges: number of register ranges for fw handshake regs
+ * @csr: the register definition of MAX10 BMC
+ * @flash_ops: optional device specific operations for flash R/W
+ * @ops: device specific operations
  */
 struct intel_m10bmc {
 	struct device *dev;
 	struct regmap *regmap;
 	struct rw_semaphore bmcfw_lock;
 	enum m10bmc_fw_state bmcfw_state;
+	enum m10bmc_type type;
 	const struct regmap_range *handshake_sys_reg_ranges;
 	unsigned int handshake_sys_reg_nranges;
+	const struct m10bmc_csr *csr;
+	struct fpga_flash_ops *flash_ops;
+	struct m10bmc_ops ops;
 };
 
 /*
@@ -223,5 +362,11 @@ int m10bmc_fw_state_enter(struct intel_m10bmc *m10bmc,
 			  enum m10bmc_fw_state new_state);
 
 void m10bmc_fw_state_exit(struct intel_m10bmc *m10bmc);
+
+/*
+ * MAX10 BMC Core support
+ */
+int m10bmc_dev_init(struct intel_m10bmc *m10bmc);
+extern const struct attribute_group *m10bmc_dev_groups[];
 
 #endif /* __MFD_INTEL_M10_BMC_H */

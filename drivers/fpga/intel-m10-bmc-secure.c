@@ -15,9 +15,41 @@
 #include <linux/slab.h>
 #include <linux/version.h>
 
+struct m10bmc_sec;
+
+/* Supported fpga secure manager types */
+enum fpga_sec_type {
+	N3000BMC_SEC,
+	D5005BMC_SEC,
+	N5010BMC_SEC,
+	N6010BMC_SEC
+};
+
+/* Supported names for power-on images */
+enum fpga_image {
+	FPGA_FACTORY,
+	FPGA_USER1,
+	FPGA_USER2,
+	FPGA_MAX
+};
+
+static const char * const fpga_image_names[] = {
+	[FPGA_FACTORY] = "fpga_factory",
+	[FPGA_USER1] = "fpga_user1",
+	[FPGA_USER2] = "fpga_user2"
+};
+
+struct fpga_power_on {
+	u32 avail_image_mask;
+	int (*get_sequence)(struct m10bmc_sec *sec, char *buf);
+	int (*set_sequence)(struct m10bmc_sec *sec, enum fpga_image images[]);
+};
+
 struct m10bmc_sec {
 	struct device *dev;
 	struct intel_m10bmc *m10bmc;
+	enum fpga_sec_type type;
+	const struct fpga_power_on *poc;	/* power on image configuration */
 };
 
 /* Root Entry Hash (REH) support */
@@ -31,12 +63,17 @@ show_root_entry_hash(struct device *dev, u32 exp_magic,
 		     u32 prog_addr, u32 reh_addr, char *buf)
 {
 	struct m10bmc_sec *sec = dev_get_drvdata(dev);
-	unsigned int stride = regmap_get_reg_stride(sec->m10bmc->regmap);
 	int sha_num_bytes, i, cnt, ret;
 	u8 hash[REH_SHA384_SIZE];
 	u32 magic;
 
-	ret = m10bmc_raw_read(sec->m10bmc, prog_addr, &magic);
+	if (sec->m10bmc->type == M10_N6010) {
+		ret = sec->m10bmc->ops.flash_read(sec->m10bmc, &magic,
+						  prog_addr, sizeof(u32));
+	} else {
+		ret = m10bmc_raw_read(sec->m10bmc, prog_addr, &magic);
+	}
+
 	if (ret)
 		return ret;
 
@@ -53,12 +90,10 @@ show_root_entry_hash(struct device *dev, u32 exp_magic,
 		return -EINVAL;
 	}
 
-	WARN_ON(sha_num_bytes % stride);
-	ret = regmap_bulk_read(sec->m10bmc->regmap, reh_addr,
-			       hash, sha_num_bytes / stride);
+	ret = sec->m10bmc->ops.flash_read(sec->m10bmc, hash, reh_addr,
+					   sha_num_bytes);
 	if (ret) {
-		dev_err(dev, "failed to read root entry hash: %x cnt %x: %d\n",
-			reh_addr, sha_num_bytes / stride, ret);
+		dev_err(dev, "failed to read root entry hash\n");
 		return ret;
 	}
 
@@ -70,16 +105,21 @@ show_root_entry_hash(struct device *dev, u32 exp_magic,
 	return cnt;
 }
 
-#define DEVICE_ATTR_SEC_REH_RO(_name, _magic, _prog_addr, _reh_addr) \
+#define DEVICE_ATTR_SEC_REH_RO(_name) \
 static ssize_t _name##_root_entry_hash_show(struct device *dev, \
 					    struct device_attribute *attr, \
 					    char *buf) \
-{ return show_root_entry_hash(dev, _magic, _prog_addr, _reh_addr, buf); } \
+{							\
+	struct m10bmc_sec *sec = dev_get_drvdata(dev);   \
+	struct intel_m10bmc *m10bmc = sec->m10bmc;  \
+	return show_root_entry_hash(dev, _name##_magic(m10bmc),\
+			_name##_prog_addr(m10bmc), _name##_reh_addr(m10bmc),\
+			buf); } \
 static DEVICE_ATTR_RO(_name##_root_entry_hash)
 
-DEVICE_ATTR_SEC_REH_RO(bmc, BMC_PROG_MAGIC, BMC_PROG_ADDR, BMC_REH_ADDR);
-DEVICE_ATTR_SEC_REH_RO(sr, SR_PROG_MAGIC, SR_PROG_ADDR, SR_REH_ADDR);
-DEVICE_ATTR_SEC_REH_RO(pr, PR_PROG_MAGIC, PR_PROG_ADDR, PR_REH_ADDR);
+DEVICE_ATTR_SEC_REH_RO(bmc);
+DEVICE_ATTR_SEC_REH_RO(sr);
+DEVICE_ATTR_SEC_REH_RO(pr);
 
 #define CSK_BIT_LEN		128U
 #define CSK_32ARRAY_SIZE	DIV_ROUND_UP(CSK_BIT_LEN, 32)
@@ -87,21 +127,16 @@ DEVICE_ATTR_SEC_REH_RO(pr, PR_PROG_MAGIC, PR_PROG_ADDR, PR_REH_ADDR);
 static ssize_t
 show_canceled_csk(struct device *dev, u32 addr, char *buf)
 {
-	unsigned int i, stride, size = CSK_32ARRAY_SIZE * sizeof(u32);
+	unsigned int i, size = CSK_32ARRAY_SIZE * sizeof(u32);
 	struct m10bmc_sec *sec = dev_get_drvdata(dev);
 	DECLARE_BITMAP(csk_map, CSK_BIT_LEN);
 	__le32 csk_le32[CSK_32ARRAY_SIZE];
 	u32 csk32[CSK_32ARRAY_SIZE];
 	int ret;
 
-	stride = regmap_get_reg_stride(sec->m10bmc->regmap);
-
-	WARN_ON(size % stride);
-	ret = regmap_bulk_read(sec->m10bmc->regmap, addr, csk_le32,
-			       size / stride);
+	ret = sec->m10bmc->ops.flash_read(sec->m10bmc, csk_le32, addr, size);
 	if (ret) {
-		dev_err(sec->dev, "failed to read CSK vector: %x cnt %x: %d\n",
-			addr, size / stride, ret);
+		dev_err(sec->dev, "failed to read CSK vector\n");
 		return ret;
 	}
 
@@ -113,18 +148,22 @@ show_canceled_csk(struct device *dev, u32 addr, char *buf)
 	return bitmap_print_to_pagebuf(1, buf, csk_map, CSK_BIT_LEN);
 }
 
-#define DEVICE_ATTR_SEC_CSK_RO(_name, _addr) \
+#define DEVICE_ATTR_SEC_CSK_RO(_name) \
 static ssize_t _name##_canceled_csks_show(struct device *dev, \
 					  struct device_attribute *attr, \
 					  char *buf) \
-{ return show_canceled_csk(dev, _addr, buf); } \
+{                                                    \
+	struct m10bmc_sec *sec = dev_get_drvdata(dev);   \
+	struct intel_m10bmc *m10bmc = sec->m10bmc;  \
+	return show_canceled_csk(dev, _name##_prog_addr(m10bmc) + CSK_VEC_OFFSET,\
+			buf); } \
 static DEVICE_ATTR_RO(_name##_canceled_csks)
 
 #define CSK_VEC_OFFSET 0x34
 
-DEVICE_ATTR_SEC_CSK_RO(bmc, BMC_PROG_ADDR + CSK_VEC_OFFSET);
-DEVICE_ATTR_SEC_CSK_RO(sr, SR_PROG_ADDR + CSK_VEC_OFFSET);
-DEVICE_ATTR_SEC_CSK_RO(pr, PR_PROG_ADDR + CSK_VEC_OFFSET);
+DEVICE_ATTR_SEC_CSK_RO(bmc);
+DEVICE_ATTR_SEC_CSK_RO(sr);
+DEVICE_ATTR_SEC_CSK_RO(pr);
 
 #define FLASH_COUNT_SIZE 4096	/* count stored as inverted bit vector */
 
@@ -132,24 +171,21 @@ static ssize_t flash_count_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
 	struct m10bmc_sec *sec = dev_get_drvdata(dev);
-	unsigned int stride, num_bits;
+	unsigned int num_bits;
 	u8 *flash_buf;
 	int cnt, ret;
 
-	stride = regmap_get_reg_stride(sec->m10bmc->regmap);
 	num_bits = FLASH_COUNT_SIZE * 8;
 
 	flash_buf = kmalloc(FLASH_COUNT_SIZE, GFP_KERNEL);
 	if (!flash_buf)
 		return -ENOMEM;
 
-	WARN_ON(FLASH_COUNT_SIZE % stride);
-	ret = regmap_bulk_read(sec->m10bmc->regmap, STAGING_FLASH_COUNT,
-			       flash_buf, FLASH_COUNT_SIZE / stride);
+	ret = sec->m10bmc->ops.flash_read(sec->m10bmc, flash_buf,
+					   STAGING_FLASH_COUNT,
+					   FLASH_COUNT_SIZE);
 	if (ret) {
-		dev_err(sec->dev,
-			"failed to read flash count: %x cnt %x: %d\n",
-			STAGING_FLASH_COUNT, FLASH_COUNT_SIZE / stride, ret);
+		dev_err(sec->dev, "failed to read flash count\n");
 		goto exit_free;
 	}
 	cnt = num_bits - bitmap_weight((unsigned long *)flash_buf, num_bits);
@@ -160,6 +196,215 @@ exit_free:
 	return ret ? : sysfs_emit(buf, "%u\n", cnt);
 }
 static DEVICE_ATTR_RO(flash_count);
+
+static enum fpga_image
+fpga_image_by_name(struct m10bmc_sec *sec, char *image_name)
+{
+	enum fpga_image i;
+
+	for (i = 0; i < FPGA_MAX; i++)
+		if (sysfs_streq(image_name, fpga_image_names[i]))
+			return i;
+
+	return FPGA_MAX;
+}
+
+static int
+fpga_images(struct m10bmc_sec *sec, char *names, enum fpga_image images[])
+{
+	u32 image_mask = sec->poc->avail_image_mask;
+	enum fpga_image image;
+	char *image_name;
+	int i = 0;
+
+	while ((image_name = strsep(&names, " \n"))) {
+		image = fpga_image_by_name(sec, image_name);
+		if (image >= FPGA_MAX || !(image_mask & BIT(image)))
+			return -EINVAL;
+
+		images[i++] = image;
+		image_mask &= ~BIT(image);
+	}
+
+	return (i == 0) ? -EINVAL : 0;
+}
+
+static int
+pmci_set_power_on_image(struct m10bmc_sec *sec, enum fpga_image images[])
+{
+	u32 poc_mask = PMCI_FACTORY_IMAGE_SEL;
+	int ret, first_user = 0;
+	u32 poc = 0;
+
+	if (images[1] == FPGA_FACTORY)
+		return -EINVAL;
+
+	if (images[0] == FPGA_FACTORY) {
+		poc = PMCI_FACTORY_IMAGE_SEL;
+		first_user = 1;
+	}
+
+	if (images[first_user] == FPGA_USER1 || images[first_user] == FPGA_USER2) {
+		poc_mask |= PMCI_USER_IMAGE_PAGE;
+		if (images[first_user] == FPGA_USER1)
+			poc |= FIELD_PREP(PMCI_USER_IMAGE_PAGE, POC_USER_IMAGE_1);
+		else
+			poc |= FIELD_PREP(PMCI_USER_IMAGE_PAGE, POC_USER_IMAGE_2);
+	}
+
+	ret = m10bmc_sys_update_bits(sec->m10bmc,
+				     m10bmc_base(sec->m10bmc) + M10BMC_PMCI_FPGA_POC,
+				     poc_mask | PMCI_FPGA_POC, poc | PMCI_FPGA_POC);
+	if (ret)
+		return ret;
+
+	ret = regmap_read_poll_timeout(sec->m10bmc->regmap,
+				       m10bmc_base(sec->m10bmc) + M10BMC_PMCI_FPGA_POC,
+				       poc,
+				       (!(poc & PMCI_FPGA_POC)),
+				       NIOS_HANDSHAKE_INTERVAL_US,
+				       NIOS_HANDSHAKE_TIMEOUT_US);
+
+	if (ret || (FIELD_GET(PMCI_NIOS_STATUS, poc) != NIOS_STATUS_SUCCESS))
+		return -EIO;
+
+	return 0;
+}
+
+static int pmci_get_power_on_image(struct m10bmc_sec *sec, char *buf)
+{
+	const char *image_names[FPGA_MAX] = { 0 };
+	int ret, i = 0;
+	u32 poc;
+
+	ret = m10bmc_sys_read(sec->m10bmc, M10BMC_PMCI_FPGA_POC, &poc);
+	if (ret)
+		return ret;
+
+	if (poc & PMCI_FACTORY_IMAGE_SEL)
+		image_names[i++] = fpga_image_names[FPGA_FACTORY];
+
+	if (FIELD_GET(PMCI_USER_IMAGE_PAGE, poc) == POC_USER_IMAGE_1) {
+		image_names[i++] = fpga_image_names[FPGA_USER1];
+		image_names[i++] = fpga_image_names[FPGA_USER2];
+	} else {
+		image_names[i++] = fpga_image_names[FPGA_USER2];
+		image_names[i++] = fpga_image_names[FPGA_USER1];
+	}
+
+	if (!(poc & PMCI_FACTORY_IMAGE_SEL))
+		image_names[i] = fpga_image_names[FPGA_FACTORY];
+
+	return sysfs_emit(buf, "%s %s %s\n", image_names[0],
+			  image_names[1], image_names[2]);
+}
+
+static ssize_t
+available_fpga_images_show(struct device *dev,
+			   struct device_attribute *attr, char *buf)
+{
+	struct m10bmc_sec *sec = dev_get_drvdata(dev);
+	ssize_t count = 0;
+	enum fpga_image i;
+
+	for (i = 0; i < FPGA_MAX; i++)
+		if (BIT(i) & sec->poc->avail_image_mask)
+			count += scnprintf(buf + count, PAGE_SIZE - count,
+					   "%s ", fpga_image_names[i]);
+	buf[count - 1] = '\n';
+
+	return count;
+}
+static DEVICE_ATTR_RO(available_fpga_images);
+
+static ssize_t
+power_on_image_show(struct device *dev,
+		    struct device_attribute *attr, char *buf)
+{
+	struct m10bmc_sec *sec = dev_get_drvdata(dev);
+
+	return sec->poc->get_sequence(sec, buf);
+}
+
+static ssize_t
+power_on_image_store(struct device *dev,
+		     struct device_attribute *attr, const char *buf, size_t count)
+{
+	enum fpga_image images[FPGA_MAX] = { [0 ... FPGA_MAX - 1] = FPGA_MAX };
+	struct m10bmc_sec *sec = dev_get_drvdata(dev);
+	char *tokens;
+	int ret;
+
+	tokens = kmemdup_nul(buf, count, GFP_KERNEL);
+	if (!tokens)
+		ret = -ENOMEM;
+
+	ret = fpga_images(sec, tokens, images);
+	if (ret)
+		goto free_exit;
+
+	ret = sec->poc->set_sequence(sec, images);
+
+free_exit:
+	kfree(tokens);
+	return ret ? : count;
+}
+static DEVICE_ATTR_RW(power_on_image);
+
+static ssize_t
+fpga_boot_image_show(struct device *dev,
+		     struct device_attribute *attr, char *buf)
+{
+	struct m10bmc_sec *sec = dev_get_drvdata(dev);
+	int ret;
+	u32 status;
+	int boot_page;
+
+	ret = m10bmc_sys_read(sec->m10bmc, m10bmc_base(sec->m10bmc) +
+			      M10BMC_PMCI_FPGA_CONF_STS, &status);
+	if (ret)
+		return ret;
+
+	if (!FIELD_GET(PMCI_FPGA_CONFIGED, status))
+		return -EINVAL;
+
+	boot_page = FIELD_GET(PMCI_FPGA_BOOT_PAGE, status);
+	if (boot_page >= FPGA_MAX)
+		return -EINVAL;
+
+	return sysfs_emit(buf, "%s\n", fpga_image_names[boot_page]);
+}
+static DEVICE_ATTR_RO(fpga_boot_image);
+
+static umode_t
+m10bmc_is_visible(struct kobject *kobj,
+		  struct attribute *attr, int n)
+{
+	struct m10bmc_sec *sec = dev_get_drvdata(kobj_to_dev(kobj));
+
+	if (sec->type != N6010BMC_SEC)
+		return 0;
+
+	return attr->mode;
+}
+
+static const struct fpga_power_on pmci_power_on_image = {
+	.avail_image_mask = BIT(FPGA_FACTORY) | BIT(FPGA_USER1) | BIT(FPGA_USER2),
+	.set_sequence = pmci_set_power_on_image,
+	.get_sequence = pmci_get_power_on_image,
+};
+
+static struct attribute *m10bmc_image_attrs[] = {
+	&dev_attr_power_on_image.attr,
+	&dev_attr_available_fpga_images.attr,
+	&dev_attr_fpga_boot_image.attr,
+	NULL,
+};
+
+static struct attribute_group m10bmc_image_attr_group = {
+	.attrs = m10bmc_image_attrs,
+	.is_visible = m10bmc_is_visible,
+};
 
 static struct attribute *m10bmc_security_attrs[] = {
 	&dev_attr_flash_count.attr,
@@ -179,6 +424,7 @@ static struct attribute_group m10bmc_security_attr_group = {
 
 static const struct attribute_group *m10bmc_sec_attr_groups[] = {
 	&m10bmc_security_attr_group,
+	&m10bmc_image_attr_group,
 	NULL,
 };
 
@@ -188,8 +434,77 @@ static void log_error_regs(struct m10bmc_sec *sec, u32 doorbell)
 
 	dev_err(sec->dev, "RSU error status: 0x%08x\n", doorbell);
 
-	if (!m10bmc_sys_read(sec->m10bmc, M10BMC_AUTH_RESULT, &auth_result))
+	if (!m10bmc_sys_read(sec->m10bmc, auth_result_reg(sec->m10bmc), &auth_result))
 		dev_err(sec->dev, "RSU auth result: 0x%08x\n", auth_result);
+}
+
+static bool rsu_status_ok(u32 status)
+{
+	return (status == RSU_STAT_NORMAL ||
+		status == RSU_STAT_NIOS_OK ||
+		status == RSU_STAT_USER_OK ||
+		status == RSU_STAT_FACTORY_OK);
+}
+
+static bool rsu_progress_done(u32 progress)
+{
+	return (progress == RSU_PROG_IDLE ||
+		progress == RSU_PROG_RSU_DONE);
+}
+
+static bool rsu_progress_busy(u32 progress)
+{
+	return (progress == RSU_PROG_AUTHENTICATING ||
+		progress == RSU_PROG_COPYING ||
+		progress == RSU_PROG_UPDATE_CANCEL ||
+		progress == RSU_PROG_PROGRAM_KEY_HASH);
+}
+
+static int
+m10bmc_sec_status(struct m10bmc_sec *sec, u32 *status)
+{
+	u32 reg_offset, reg_value;
+	int ret;
+
+	reg_offset = (sec->m10bmc->type == M10_N6010) ?
+		auth_result_reg(sec->m10bmc) : doorbell_reg(sec->m10bmc);
+
+	ret = m10bmc_sys_read(sec->m10bmc, reg_offset, &reg_value);
+	if (ret)
+		return ret;
+
+	*status = rsu_stat(reg_value);
+
+	return 0;
+}
+
+static int
+m10bmc_sec_progress_status(struct m10bmc_sec *sec, u32 *doorbell,
+			   u32 *progress, u32 *status)
+{
+	u32 auth_reg;
+	int ret;
+
+	ret = m10bmc_sys_read(sec->m10bmc,
+			      doorbell_reg(sec->m10bmc),
+			      doorbell);
+	if (ret)
+		return ret;
+
+	*progress = rsu_prog(*doorbell);
+
+	if (sec->m10bmc->type == M10_N6010) {
+		ret = m10bmc_sys_read(sec->m10bmc,
+				      auth_result_reg(sec->m10bmc),
+				      &auth_reg);
+		if (ret)
+			return ret;
+		*status = rsu_stat(auth_reg);
+	} else {
+		*status = rsu_stat(*doorbell);
+	}
+
+	return 0;
 }
 
 static enum fpga_sec_err rsu_check_idle(struct m10bmc_sec *sec)
@@ -197,12 +512,11 @@ static enum fpga_sec_err rsu_check_idle(struct m10bmc_sec *sec)
 	u32 doorbell;
 	int ret;
 
-	ret = m10bmc_sys_read(sec->m10bmc, M10BMC_DOORBELL, &doorbell);
+	ret = m10bmc_sys_read(sec->m10bmc, doorbell_reg(sec->m10bmc), &doorbell);
 	if (ret)
 		return FPGA_SEC_ERR_RW_ERROR;
 
-	if (rsu_prog(doorbell) != RSU_PROG_IDLE &&
-	    rsu_prog(doorbell) != RSU_PROG_RSU_DONE) {
+	if (!rsu_progress_done(rsu_prog(doorbell))) {
 		log_error_regs(sec, doorbell);
 		return FPGA_SEC_ERR_BUSY;
 	}
@@ -210,30 +524,49 @@ static enum fpga_sec_err rsu_check_idle(struct m10bmc_sec *sec)
 	return FPGA_SEC_ERR_NONE;
 }
 
-static inline bool rsu_start_done(u32 doorbell)
+static inline bool rsu_start_done(u32 doorbell, u32 progress, u32 status)
 {
-	u32 status, progress;
-
 	if (doorbell & DRBL_RSU_REQUEST)
 		return false;
 
-	status = rsu_stat(doorbell);
 	if (status == RSU_STAT_ERASE_FAIL || status == RSU_STAT_WEAROUT)
 		return true;
 
-	progress = rsu_prog(doorbell);
-	if (progress != RSU_PROG_IDLE && progress != RSU_PROG_RSU_DONE)
+	if (!rsu_progress_done(progress))
 		return true;
 
 	return false;
 }
 
-static enum fpga_sec_err rsu_update_init(struct m10bmc_sec *sec)
+static int rsu_poll_start_done(struct m10bmc_sec *sec, u32 *doorbell,
+			       u32 *progress, u32 *status)
 {
-	u32 doorbell, status;
+	unsigned long poll_timeout;
 	int ret;
 
-	ret = m10bmc_sys_update_bits(sec->m10bmc, M10BMC_DOORBELL,
+	poll_timeout = jiffies + msecs_to_jiffies(NIOS_HANDSHAKE_TIMEOUT_US);
+	do {
+		usleep_range(NIOS_HANDSHAKE_INTERVAL_US,
+			     NIOS_HANDSHAKE_INTERVAL_US + 10);
+
+		if (time_after(jiffies, poll_timeout))
+			return -ETIMEDOUT;
+
+		ret = m10bmc_sec_progress_status(sec, doorbell, progress, status);
+		if (ret)
+			return ret;
+
+	} while (!rsu_start_done(*doorbell, *progress, *status));
+
+	return 0;
+}
+
+static enum fpga_sec_err rsu_update_init(struct m10bmc_sec *sec)
+{
+	u32 doorbell, progress, status;
+	int ret;
+
+	ret = m10bmc_sys_update_bits(sec->m10bmc, doorbell_reg(sec->m10bmc),
 				     DRBL_RSU_REQUEST | DRBL_HOST_STATUS,
 				     DRBL_RSU_REQUEST |
 				     FIELD_PREP(DRBL_HOST_STATUS,
@@ -241,13 +574,7 @@ static enum fpga_sec_err rsu_update_init(struct m10bmc_sec *sec)
 	if (ret)
 		return FPGA_SEC_ERR_RW_ERROR;
 
-	ret = regmap_read_poll_timeout(sec->m10bmc->regmap,
-				       M10BMC_SYS_BASE + M10BMC_DOORBELL,
-				       doorbell,
-				       rsu_start_done(doorbell),
-				       NIOS_HANDSHAKE_INTERVAL_US,
-				       NIOS_HANDSHAKE_TIMEOUT_US);
-
+	ret = rsu_poll_start_done(sec, &doorbell, &progress, &status);
 	if (ret == -ETIMEDOUT) {
 		log_error_regs(sec, doorbell);
 		return FPGA_SEC_ERR_TIMEOUT;
@@ -255,7 +582,6 @@ static enum fpga_sec_err rsu_update_init(struct m10bmc_sec *sec)
 		return FPGA_SEC_ERR_RW_ERROR;
 	}
 
-	status = rsu_stat(doorbell);
 	if (status == RSU_STAT_WEAROUT) {
 		dev_warn(sec->dev, "Excessive flash update count detected\n");
 		return FPGA_SEC_ERR_WEAROUT;
@@ -273,7 +599,7 @@ static enum fpga_sec_err rsu_prog_ready(struct m10bmc_sec *sec)
 	u32 doorbell, progress;
 	int ret;
 
-	ret = m10bmc_sys_read(sec->m10bmc, M10BMC_DOORBELL, &doorbell);
+	ret = m10bmc_sys_read(sec->m10bmc, doorbell_reg(sec->m10bmc), &doorbell);
 	if (ret)
 		return FPGA_SEC_ERR_RW_ERROR;
 
@@ -283,7 +609,7 @@ static enum fpga_sec_err rsu_prog_ready(struct m10bmc_sec *sec)
 		if (time_after(jiffies, poll_timeout))
 			break;
 
-		ret = m10bmc_sys_read(sec->m10bmc, M10BMC_DOORBELL, &doorbell);
+		ret = m10bmc_sys_read(sec->m10bmc, doorbell_reg(sec->m10bmc), &doorbell);
 		if (ret)
 			return FPGA_SEC_ERR_RW_ERROR;
 	}
@@ -302,10 +628,10 @@ static enum fpga_sec_err rsu_prog_ready(struct m10bmc_sec *sec)
 
 static enum fpga_sec_err rsu_send_data(struct m10bmc_sec *sec)
 {
-	u32 doorbell;
+	u32 doorbell, status;
 	int ret;
 
-	ret = m10bmc_sys_update_bits(sec->m10bmc, M10BMC_DOORBELL,
+	ret = m10bmc_sys_update_bits(sec->m10bmc, doorbell_reg(sec->m10bmc),
 				     DRBL_HOST_STATUS,
 				     FIELD_PREP(DRBL_HOST_STATUS,
 						HOST_STATUS_WRITE_DONE));
@@ -313,7 +639,7 @@ static enum fpga_sec_err rsu_send_data(struct m10bmc_sec *sec)
 		return FPGA_SEC_ERR_RW_ERROR;
 
 	ret = regmap_read_poll_timeout(sec->m10bmc->regmap,
-				       M10BMC_SYS_BASE + M10BMC_DOORBELL,
+				       m10bmc_base(sec->m10bmc) + doorbell_reg(sec->m10bmc),
 				       doorbell,
 				       rsu_prog(doorbell) != RSU_PROG_READY,
 				       NIOS_HANDSHAKE_INTERVAL_US,
@@ -326,13 +652,11 @@ static enum fpga_sec_err rsu_send_data(struct m10bmc_sec *sec)
 		return FPGA_SEC_ERR_RW_ERROR;
 	}
 
-	switch (rsu_stat(doorbell)) {
-	case RSU_STAT_NORMAL:
-	case RSU_STAT_NIOS_OK:
-	case RSU_STAT_USER_OK:
-	case RSU_STAT_FACTORY_OK:
-		break;
-	default:
+	ret = m10bmc_sec_status(sec, &status);
+	if (ret)
+		return FPGA_SEC_ERR_RW_ERROR;
+
+	if (!rsu_status_ok(status)) {
 		log_error_regs(sec, doorbell);
 		return FPGA_SEC_ERR_HW_ERROR;
 	}
@@ -342,31 +666,21 @@ static enum fpga_sec_err rsu_send_data(struct m10bmc_sec *sec)
 
 static int rsu_check_complete(struct m10bmc_sec *sec, u32 *doorbell)
 {
-	if (m10bmc_sys_read(sec->m10bmc, M10BMC_DOORBELL, doorbell))
+	u32 progress, status;
+
+	if (m10bmc_sec_progress_status(sec, doorbell, &progress, &status))
 		return -EIO;
 
-	switch (rsu_stat(*doorbell)) {
-	case RSU_STAT_NORMAL:
-	case RSU_STAT_NIOS_OK:
-	case RSU_STAT_USER_OK:
-	case RSU_STAT_FACTORY_OK:
-		break;
-	default:
+	if (!rsu_status_ok(status))
 		return -EINVAL;
-	}
 
-	switch (rsu_prog(*doorbell)) {
-	case RSU_PROG_IDLE:
-	case RSU_PROG_RSU_DONE:
+	if (rsu_progress_done(progress))
 		return 0;
-	case RSU_PROG_AUTHENTICATING:
-	case RSU_PROG_COPYING:
-	case RSU_PROG_UPDATE_CANCEL:
-	case RSU_PROG_PROGRAM_KEY_HASH:
+
+	if (rsu_progress_busy(progress))
 		return -EAGAIN;
-	default:
-		return -EINVAL;
-	}
+
+	return -EINVAL;
 }
 
 static enum fpga_sec_err m10bmc_sec_prepare(struct fpga_sec_mgr *smgr)
@@ -390,6 +704,8 @@ static enum fpga_sec_err m10bmc_sec_prepare(struct fpga_sec_mgr *smgr)
 		goto fw_state_exit;
 
 	ret = rsu_prog_ready(sec);
+	if (ret == FPGA_SEC_ERR_NONE)
+		goto fw_state_exit;
 
 fw_state_exit:
 	m10bmc_fw_state_exit(sec->m10bmc);
@@ -406,7 +722,7 @@ m10bmc_sec_write_blk(struct fpga_sec_mgr *smgr, u32 offset)
 	u32 doorbell, blk_size;
 	int ret;
 
-	ret = m10bmc_sys_read(sec->m10bmc, M10BMC_DOORBELL, &doorbell);
+	ret = m10bmc_sys_read(sec->m10bmc, doorbell_reg(sec->m10bmc), &doorbell);
 	if (ret) {
 		return FPGA_SEC_ERR_RW_ERROR;
 	} else if (rsu_prog(doorbell) != RSU_PROG_READY) {
@@ -419,6 +735,33 @@ m10bmc_sec_write_blk(struct fpga_sec_mgr *smgr, u32 offset)
 				M10BMC_STAGING_BASE + offset,
 				(void *)smgr->data + offset,
 				(blk_size + stride - 1) / stride);
+
+	if (ret)
+		return FPGA_SEC_ERR_RW_ERROR;
+
+	smgr->remaining_size -= blk_size;
+	return FPGA_SEC_ERR_NONE;
+}
+
+static enum fpga_sec_err
+pmci_sec_write_blk(struct fpga_sec_mgr *smgr, u32 offset)
+{
+	struct m10bmc_sec *sec = smgr->priv;
+	struct intel_m10bmc *m10bmc = sec->m10bmc;
+	u32 doorbell, blk_size;
+	int ret;
+
+	ret = m10bmc_sys_read(m10bmc, doorbell_reg(m10bmc), &doorbell);
+	if (ret) {
+		return FPGA_SEC_ERR_RW_ERROR;
+	} else if (rsu_prog(doorbell) != RSU_PROG_READY) {
+		log_error_regs(sec, doorbell);
+		return FPGA_SEC_ERR_HW_ERROR;
+	}
+
+	blk_size = min_t(u32, smgr->remaining_size, WRITE_BLOCK_SIZE);
+	ret = m10bmc->flash_ops->write_blk(m10bmc,
+					   (void *)smgr->data + offset, blk_size);
 
 	if (ret)
 		return FPGA_SEC_ERR_RW_ERROR;
@@ -483,14 +826,14 @@ static enum fpga_sec_err m10bmc_sec_cancel(struct fpga_sec_mgr *smgr)
 	u32 doorbell;
 	int ret;
 
-	ret = m10bmc_sys_read(sec->m10bmc, M10BMC_DOORBELL, &doorbell);
+	ret = m10bmc_sys_read(sec->m10bmc, doorbell_reg(sec->m10bmc), &doorbell);
 	if (ret)
 		return FPGA_SEC_ERR_RW_ERROR;
 
 	if (rsu_prog(doorbell) != RSU_PROG_READY)
 		return FPGA_SEC_ERR_BUSY;
 
-	ret = m10bmc_sys_update_bits(sec->m10bmc, M10BMC_DOORBELL,
+	ret = m10bmc_sys_update_bits(sec->m10bmc, doorbell_reg(sec->m10bmc),
 				     DRBL_HOST_STATUS,
 				     FIELD_PREP(DRBL_HOST_STATUS,
 						HOST_STATUS_ABORT_RSU));
@@ -510,12 +853,8 @@ static u64 m10bmc_sec_hw_errinfo(struct fpga_sec_mgr *smgr)
 	case FPGA_SEC_ERR_TIMEOUT:
 	case FPGA_SEC_ERR_BUSY:
 	case FPGA_SEC_ERR_WEAROUT:
-		if (m10bmc_sys_read(sec->m10bmc, M10BMC_DOORBELL, &doorbell))
-			doorbell = HW_ERRINFO_POISON;
-
-		if (m10bmc_sys_read(sec->m10bmc, M10BMC_AUTH_RESULT,
-				    &auth_result))
-			auth_result = HW_ERRINFO_POISON;
+		m10bmc_sys_read(sec->m10bmc, doorbell_reg(sec->m10bmc), &doorbell);
+		m10bmc_sys_read(sec->m10bmc, auth_result_reg(sec->m10bmc), &auth_result);
 
 		return (u64)doorbell << 32 | (u64)auth_result;
 	default:
@@ -536,17 +875,61 @@ static int m10bmc_sec_bmc_image_load(struct fpga_sec_mgr *smgr,
 		return -EINVAL;
 	}
 
-	ret = m10bmc_sys_read(sec->m10bmc, M10BMC_DOORBELL, &doorbell);
+	ret = m10bmc_sys_read(sec->m10bmc, doorbell_reg(sec->m10bmc), &doorbell);
 	if (ret)
 		return ret;
 
-	if (doorbell & DRBL_REBOOT_DISABLED)
-		return -EBUSY;
+	switch (sec->type) {
+	case N3000BMC_SEC:
+	case D5005BMC_SEC:
+	case N5010BMC_SEC:
+		if (doorbell & DRBL_REBOOT_DISABLED)
+			return -EBUSY;
 
-	return m10bmc_sys_update_bits(sec->m10bmc, M10BMC_DOORBELL,
-				     DRBL_CONFIG_SEL | DRBL_REBOOT_REQ,
-				     FIELD_PREP(DRBL_CONFIG_SEL, val) |
-				     DRBL_REBOOT_REQ);
+		return m10bmc_sys_update_bits(sec->m10bmc, doorbell_reg(sec->m10bmc),
+					      DRBL_CONFIG_SEL | DRBL_REBOOT_REQ,
+					      FIELD_PREP(DRBL_CONFIG_SEL, val) |
+					      DRBL_REBOOT_REQ);
+	case N6010BMC_SEC:
+		if (doorbell & PMCI_DRBL_REBOOT_DISABLED)
+			return -EBUSY;
+
+		return regmap_update_bits(sec->m10bmc->regmap,
+					  m10bmc_base(sec->m10bmc) +
+					  M10BMC_PMCI_MAX10_RECONF,
+					  PMCI_MAX10_REBOOT_REQ | PMCI_MAX10_REBOOT_PAGE,
+					  FIELD_PREP(PMCI_MAX10_REBOOT_PAGE, val) |
+					  PMCI_MAX10_REBOOT_REQ);
+
+	default:
+		return -EINVAL;
+	}
+}
+
+static int pmci_sec_fpga_image_load(struct fpga_sec_mgr *smgr,
+				    unsigned int val)
+{
+	struct m10bmc_sec *sec = smgr->priv;
+	int ret;
+
+	if (val > 2) {
+		dev_err(sec->dev, "%s invalid reload val = %d\n",
+			__func__, val);
+		return -EINVAL;
+	}
+
+	ret = regmap_update_bits(sec->m10bmc->regmap,
+				 m10bmc_base(sec->m10bmc) + M10BMC_PMCI_FPGA_RECONF,
+				 PMCI_FPGA_RP_LOAD, 0);
+	if (ret)
+		return ret;
+
+	return regmap_update_bits(sec->m10bmc->regmap,
+				  m10bmc_base(sec->m10bmc) +
+				  M10BMC_PMCI_FPGA_RECONF,
+				  PMCI_FPGA_RECONF_PAGE | PMCI_FPGA_RP_LOAD,
+				  FIELD_PREP(PMCI_FPGA_RECONF_PAGE, val) |
+				  PMCI_FPGA_RP_LOAD);
 }
 
 static int m10bmc_sec_bmc_image_load_0(struct fpga_sec_mgr *smgr)
@@ -559,12 +942,37 @@ static int m10bmc_sec_bmc_image_load_1(struct fpga_sec_mgr *smgr)
 	return m10bmc_sec_bmc_image_load(smgr, 1);
 }
 
+static int pmci_sec_bmc_image_load_0(struct fpga_sec_mgr *smgr)
+{
+	return m10bmc_sec_bmc_image_load(smgr, 0);
+}
+
+static int pmci_sec_bmc_image_load_1(struct fpga_sec_mgr *smgr)
+{
+	return m10bmc_sec_bmc_image_load(smgr, 1);
+}
+
+static int pmci_sec_fpga_image_load_0(struct fpga_sec_mgr *smgr)
+{
+	return pmci_sec_fpga_image_load(smgr, 0);
+}
+
+static int pmci_sec_fpga_image_load_1(struct fpga_sec_mgr *smgr)
+{
+	return pmci_sec_fpga_image_load(smgr, 1);
+}
+
+static int pmci_sec_fpga_image_load_2(struct fpga_sec_mgr *smgr)
+{
+	return pmci_sec_fpga_image_load(smgr, 2);
+}
+
 static int retimer_check_idle(struct m10bmc_sec *sec)
 {
 	u32 doorbell;
 	int ret;
 
-	ret = m10bmc_sys_read(sec->m10bmc, M10BMC_DOORBELL, &doorbell);
+	ret = m10bmc_sys_read(sec->m10bmc, doorbell_reg(sec->m10bmc), &doorbell);
 	if (ret)
 		return -EIO;
 
@@ -584,7 +992,7 @@ static int trigger_retimer_eeprom_load(struct m10bmc_sec *sec)
 	unsigned int val;
 	int ret;
 
-	ret = m10bmc_sys_update_bits(m10bmc, M10BMC_DOORBELL,
+	ret = m10bmc_sys_update_bits(m10bmc, doorbell_reg(m10bmc),
 				     DRBL_PKVL_EEPROM_LOAD_SEC,
 				     DRBL_PKVL_EEPROM_LOAD_SEC);
 	if (ret)
@@ -597,7 +1005,7 @@ static int trigger_retimer_eeprom_load(struct m10bmc_sec *sec)
 	 * return an error code.
 	 */
 	ret = regmap_read_poll_timeout(m10bmc->regmap,
-				       M10BMC_SYS_BASE + M10BMC_DOORBELL,
+				       m10bmc_base(m10bmc) + doorbell_reg(m10bmc),
 				       val,
 				       (!(val & DRBL_PKVL_EEPROM_LOAD_SEC)),
 				       M10BMC_PKVL_LOAD_INTERVAL_US,
@@ -605,7 +1013,7 @@ static int trigger_retimer_eeprom_load(struct m10bmc_sec *sec)
 	if (ret == -ETIMEDOUT) {
 		dev_err(sec->dev, "%s PKVL_EEPROM_LOAD clear timedout\n",
 			__func__);
-		m10bmc_sys_update_bits(m10bmc, M10BMC_DOORBELL,
+		m10bmc_sys_update_bits(m10bmc, doorbell_reg(m10bmc),
 				       DRBL_PKVL_EEPROM_LOAD_SEC, 0);
 		ret = -ENODEV;
 	} else if (ret) {
@@ -629,7 +1037,7 @@ static int poll_retimer_eeprom_load_done(struct m10bmc_sec *sec)
 	 * a successful update.
 	 */
 	ret = regmap_read_poll_timeout(m10bmc->regmap,
-				       M10BMC_SYS_BASE + M10BMC_DOORBELL,
+				       m10bmc_base(m10bmc) + doorbell_reg(m10bmc),
 				       doorbell,
 				       ((rsu_prog(doorbell) ==
 					 RSU_PROG_PKVL_PROM_DONE) ||
@@ -667,7 +1075,7 @@ static int poll_retimer_preload_done(struct m10bmc_sec *sec)
 	 * and confirm that the updated firmware is operational
 	 */
 	ret = regmap_read_poll_timeout(m10bmc->regmap,
-				       M10BMC_SYS_BASE + M10BMC_PKVL_POLL_CTRL, val,
+				       m10bmc_base(m10bmc) + M10BMC_PKVL_POLL_CTRL, val,
 				       ((val & M10BMC_PKVL_PRELOAD) == M10BMC_PKVL_PRELOAD),
 				       M10BMC_PKVL_PRELOAD_INTERVAL_US,
 				       M10BMC_PKVL_PRELOAD_TIMEOUT_US);
@@ -742,8 +1150,32 @@ static struct image_load d5005_image_load_hndlrs[] = {
 	{}
 };
 
+static struct image_load pmci_image_load_hndlrs[] = {
+	{
+		.name = "bmc_factory",
+		.load_image = pmci_sec_bmc_image_load_0,
+	},
+	{
+		.name = "bmc_user",
+		.load_image = pmci_sec_bmc_image_load_1,
+	},
+	{
+		.name = "fpga_factory",
+		.load_image = pmci_sec_fpga_image_load_0,
+	},
+	{
+		.name = "fpga_user1",
+		.load_image = pmci_sec_fpga_image_load_1,
+	},
+	{
+		.name = "fpga_user2",
+		.load_image = pmci_sec_fpga_image_load_2,
+	},
+	{}
+};
+
 static struct fpga_sec_mgr_ops *
-m10bmc_sops_create(struct device *dev, enum m10bmc_type type)
+m10bmc_sops_create(struct device *dev, enum fpga_sec_type type)
 {
 	struct fpga_sec_mgr_ops *sops;
 
@@ -757,9 +1189,16 @@ m10bmc_sops_create(struct device *dev, enum m10bmc_type type)
 	sops->cancel = m10bmc_sec_cancel;
 	sops->get_hw_errinfo = m10bmc_sec_hw_errinfo;
 
-	if (type == M10_N3000)
+	if (type == N6010BMC_SEC) {
+		sops->write_blk = pmci_sec_write_blk;
+		sops->image_load = pmci_image_load_hndlrs;
+	} else {
+		sops->write_blk = m10bmc_sec_write_blk;
+	}
+
+	if (type == N3000BMC_SEC)
 		sops->image_load = n3000_image_load_hndlrs;
-	else
+	else if (type == D5005BMC_SEC || type == N5010BMC_SEC)
 		sops->image_load = d5005_image_load_hndlrs;
 
 	return sops;
@@ -768,7 +1207,7 @@ m10bmc_sops_create(struct device *dev, enum m10bmc_type type)
 static int m10bmc_secure_probe(struct platform_device *pdev)
 {
 	const struct platform_device_id *id = platform_get_device_id(pdev);
-	enum m10bmc_type type = (enum m10bmc_type)id->driver_data;
+	enum fpga_sec_type type = (enum fpga_sec_type)id->driver_data;
 	struct fpga_sec_mgr_ops *sops;
 	struct fpga_sec_mgr *smgr;
 	struct m10bmc_sec *sec;
@@ -784,7 +1223,16 @@ static int m10bmc_secure_probe(struct platform_device *pdev)
 
 	sec->dev = &pdev->dev;
 	sec->m10bmc = dev_get_drvdata(pdev->dev.parent);
+	sec->type = type;
 	dev_set_drvdata(&pdev->dev, sec);
+
+	if (type == N6010BMC_SEC && !sec->m10bmc->flash_ops) {
+		dev_err(sec->dev, "No flash-ops provided for security manager\n");
+		return -EINVAL;
+	}
+
+	if (type == N6010BMC_SEC)
+		sec->poc = &pmci_power_on_image;
 
 	smgr = devm_fpga_sec_mgr_create(sec->dev, "Max10 BMC Secure Update",
 					sops, sec);
@@ -807,15 +1255,19 @@ static int m10bmc_secure_probe(struct platform_device *pdev)
 static const struct platform_device_id intel_m10bmc_secure_ids[] = {
 	{
 		.name = "n3000bmc-secure",
-		.driver_data = (unsigned long)M10_N3000,
+		.driver_data = (unsigned long)N3000BMC_SEC,
 	},
 	{
 		.name = "d5005bmc-secure",
-		.driver_data = (unsigned long)M10_D5005,
+		.driver_data = (unsigned long)D5005BMC_SEC,
 	},
 	{
 		.name = "n5010bmc-secure",
-		.driver_data = (unsigned long)M10_N5010,
+		.driver_data = (unsigned long)N5010BMC_SEC,
+	},
+	{
+		.name = "n6010bmc-secure",
+		.driver_data = (unsigned long)N6010BMC_SEC,
 	},
 	{ }
 };
