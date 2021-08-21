@@ -40,13 +40,15 @@ obj-m += dfl-hssi.o
 obj-m += dfl-n3000-nios.o
 obj-m += dfl-emif.o
 obj-m += intel-s10-phy.o
-obj-m += intel-m10-bmc.o
+obj-m += intel-m10-bmc-core.o
+obj-m += intel-m10-bmc-spi.o
 obj-m += intel-m10-bmc-hwmon.o
 obj-m += intel-m10-bmc-secure.o
 obj-m += regmap-indirect-register.o
 obj-m += s10hssi.o
 obj-m += n5010-phy.o
 obj-m += n5010-hssi.o
+obj-m += intel-m10-bmc-pmci.o
 obj-m += uio_dfl.o
 obj-m += dfl-pci.o
 
@@ -79,13 +81,15 @@ fpga-mgr-y := drivers/fpga/fpga-mgr.o
 fpga-region-y := drivers/fpga/fpga-region.o
 fpga-sec-mgr-y := drivers/fpga/fpga-sec-mgr.o
 intel-s10-phy-y := drivers/net/phy/intel-s10-phy.o
-intel-m10-bmc-y := drivers/mfd/intel-m10-bmc.o
+intel-m10-bmc-core-y := drivers/mfd/intel-m10-bmc-core.o
+intel-m10-bmc-spi-y := drivers/mfd/intel-m10-bmc-spi.o
 intel-m10-bmc-hwmon-y := drivers/hwmon/intel-m10-bmc-hwmon.o
 intel-m10-bmc-secure-y := drivers/fpga/intel-m10-bmc-secure.o
 s10hssi-y := drivers/net/ethernet/intel/s10hssi.o
 regmap-indirect-register-y := drivers/base/regmap/regmap-indirect-register.o
 n5010-phy-y := drivers/net/ethernet/silicom/n5010-phy.o
 n5010-hssi-y := drivers/net/ethernet/silicom/n5010-hssi.o
+intel-m10-bmc-pmci-y := drivers/mfd/intel-m10-bmc-pmci.o
 uio_dfl-y := drivers/uio/uio_dfl.o
 
 # intermediates used when reversing modules list
