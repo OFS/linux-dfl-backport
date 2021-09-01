@@ -191,8 +191,11 @@ static int m10bmc_log_probe(struct platform_device *pdev)
 	ddata->bom_info_nvmem = devm_nvmem_register(ddata->dev, &bom_info_nvmem_config);
 	if (IS_ERR(ddata->bom_info_nvmem))
 		return PTR_ERR(ddata->bom_info_nvmem);
-
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
+	return device_add_groups(&pdev->dev, m10bmc_log_groups);
+#else
 	return 0;
+#endif
 }
 
 static int m10bmc_log_remove(struct platform_device *pdev)
@@ -215,7 +218,9 @@ static struct platform_driver intel_m10bmc_log_driver = {
 	.remove = m10bmc_log_remove,
 	.driver = {
 		.name = "n6010bmc-log",
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= 0x803
 		.dev_groups = m10bmc_log_groups,
+#endif
 	},
 };
 module_platform_driver(intel_m10bmc_log_driver);
