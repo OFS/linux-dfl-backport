@@ -2,6 +2,9 @@ KERNEL ?= $(shell uname -r)
 KERNELDIR ?= /lib/modules/$(KERNEL)/build
 LINUXINCLUDE := -I$(src)/include -I$(src)/include/uapi $(LINUXINCLUDE)
 
+# make Kconfig conditionals always work
+include $(KERNELDIR)/.config
+
 ifeq ($(DEBUG),1)
 DYNDBG = dyndbg=+p
 endif
@@ -17,6 +20,10 @@ BACKPORT_VERSION := $(shell git describe --always --tags --dirty --long | sed -E
 endif
 
 export BACKPORT_VERSION
+
+ifndef CONFIG_REGMAP_MMIO
+obj-m += regmap-mmio.o
+endif
 
 # modules to build (in insmod order)
 ifndef CONFIG_REGMAP_SPI_AVMM
@@ -39,6 +46,7 @@ obj-m += spi-altera-dfl.o
 obj-m += dfl-hssi.o
 obj-m += dfl-n3000-nios.o
 obj-m += dfl-emif.o
+obj-m += qsfp-mem.o
 obj-m += intel-s10-phy.o
 obj-m += intel-m10-bmc-core.o
 obj-m += intel-m10-bmc-spi.o
@@ -52,6 +60,7 @@ obj-m += intel-m10-bmc-pmci.o
 obj-m += uio_dfl.o
 obj-m += dfl-pci.o
 
+regmap-mmio-y := drivers/base/regmap/regmap-mmio.o
 regmap-spi-avmm-y := drivers/base/regmap/regmap-spi-avmm.o
 dfl-y := drivers/fpga/dfl.o
 
@@ -80,6 +89,7 @@ fpga-bridge-y := drivers/fpga/fpga-bridge.o
 fpga-mgr-y := drivers/fpga/fpga-mgr.o
 fpga-region-y := drivers/fpga/fpga-region.o
 fpga-sec-mgr-y := drivers/fpga/fpga-sec-mgr.o
+qsfp-mem-y := drivers/net/phy/qsfp-mem.o
 intel-s10-phy-y := drivers/net/phy/intel-s10-phy.o
 intel-m10-bmc-core-y := drivers/mfd/intel-m10-bmc-core.o
 intel-m10-bmc-spi-y := drivers/mfd/intel-m10-bmc-spi.o
