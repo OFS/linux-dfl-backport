@@ -111,7 +111,7 @@ struct dfl_iopll {
 #define IOPLL_WRITE_POLL_INVL_US	10	/* Write poll interval */
 #define IOPLL_WRITE_POLL_TIMEOUT_US	1000000	/* Write poll timeout */
 
-static int iopll_reset(struct dfl_iopll *iopll)
+static void iopll_reset(struct dfl_iopll *iopll)
 {
 	u64 v;
 
@@ -134,6 +134,11 @@ static int iopll_reset(struct dfl_iopll *iopll)
 	writeq(v, iopll->csr_base + IOPLL_FREQ_CMD0);
 
 	msleep(IOPLL_RESET_DELAY_MS);
+}
+
+static int iopll_verify_lock(struct dfl_iopll *iopll)
+{
+	u64 v;
 
 	v = readq(iopll->csr_base + IOPLL_FREQ_STS0);
 	if (!(v & IOPLL_LOCKED)) {
@@ -423,21 +428,19 @@ static ssize_t frequency_store(struct device *dev,
 	if (count != sizeof(struct pll_config))
 		return -EINVAL;
 
-	if ((iopll_config->pll_freq_khz > IOPLL_MAX_FREQ * 1000) ||
-	    (iopll_config->pll_freq_khz < IOPLL_MIN_FREQ * 1000))
-		return -EINVAL;
-
 	mutex_lock(&iopll->iopll_mutex);
 
 	ret = iopll_set_freq(iopll, iopll_config, &seq);
 	if (ret)
 		goto done;
 
-	ret = iopll_reset(iopll);
+	iopll_reset(iopll);
+
+	ret = iopll_calibrate(iopll, &seq);
 	if (ret)
 		goto done;
 
-	ret = iopll_calibrate(iopll, &seq);
+	ret = iopll_verify_lock(iopll);
 
 done:
 	mutex_unlock(&iopll->iopll_mutex);
@@ -484,7 +487,7 @@ static ssize_t feature_rev_show(struct device *dev,
 {
 	struct dfl_device *dfl_dev = to_dfl_dev(dev);
 
-	return sprintf(buf, "%d\n", dfl_dev->revision);
+	return sprintf(buf, "%u\n", dfl_dev->revision);
 }
 static DEVICE_ATTR_RO(feature_rev);
 
