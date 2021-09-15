@@ -180,6 +180,9 @@ enum m10bmc_type {
 #define M10BMC_PMCI_MAC_LOW    0x20
 #define M10BMC_PMCI_MAC_HIGH    0x24
 
+#define M10BMC_PMCI_TIME_LOW	0x60
+#define M10BMC_PMCI_TIME_HIGH	0x60
+
 #define M10BMC_PMCI_FLASH_CTRL 0x1d0
 #define FLASH_MUX_SELECTION GENMASK(2, 0)
 #define FLASH_MUX_IDLE 0
@@ -222,6 +225,15 @@ enum m10bmc_type {
 #define M10BMC_PMCI_FPGA_CONF_STS 0xa0
 #define PMCI_FPGA_BOOT_PAGE  GENMASK(2, 0)
 #define PMCI_FPGA_CONFIGED   BIT(3)
+
+#define PMCI_ERROR_LOG_ADDR  0x7fb0000
+#define PMCI_ERROR_LOG_SIZE  0x40000
+
+#define PMCI_FPGA_IMAGE_DIR_ADDR  0x7ff6000
+#define PMCI_FPGA_IMAGE_DIR_SIZE  0x3000
+
+#define PMCI_BOM_INFO_ADDR  0x7ff0000
+#define PMCI_BOM_INFO_SIZE  0x2000
 
 /* Addresses for security related data in FLASH */
 #define PMCI_BMC_REH_ADDR 0x7ffc004
