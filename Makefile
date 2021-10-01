@@ -17,7 +17,7 @@ RPMBUILDOPTS = -bb --build-in-place \
 
 ifeq ($(BACKPORT_VERSION),)
 ifneq ($(wildcard .git),)
-BACKPORT_VERSION := $(shell git describe --always --tags --dirty --long | sed -E 's/^v//;s/([^-]*-g)/r\1/;s/-/./g;s/\.rc/rc/')
+BACKPORT_VERSION := $(shell git describe --always --tags --dirty | sed -E 's/^v//;s/([^-]*-g)/r\1/;s/-/./g;s/\.rc/rc/')
 endif
 endif
 
