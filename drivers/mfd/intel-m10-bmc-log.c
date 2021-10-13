@@ -208,7 +208,7 @@ static int m10bmc_log_remove(struct platform_device *pdev)
 
 static const struct platform_device_id intel_m10bmc_log_ids[] = {
 	{
-		.name = "n6010bmc-log",
+		.name = "n6000bmc-log",
 	},
 	{ }
 };

@@ -22,7 +22,7 @@ enum fpga_sec_type {
 	N3000BMC_SEC,
 	D5005BMC_SEC,
 	N5010BMC_SEC,
-	N6010BMC_SEC
+	N6000BMC_SEC
 };
 
 /* Supported names for power-on images */
@@ -66,7 +66,7 @@ show_root_entry_hash(struct device *dev, u32 exp_magic,
 	u8 hash[REH_SHA384_SIZE];
 	u32 magic;
 
-	if (sec->m10bmc->type == M10_N6010) {
+	if (sec->type == N6000BMC_SEC) {
 		ret = sec->m10bmc->ops.flash_read(sec->m10bmc, &magic,
 						  prog_addr, sizeof(u32));
 	} else {
@@ -344,7 +344,7 @@ m10bmc_is_visible(struct kobject *kobj,
 {
 	struct m10bmc_sec *sec = dev_get_drvdata(kobj_to_dev(kobj));
 
-	if (sec->type != N6010BMC_SEC)
+	if (sec->type != N6000BMC_SEC)
 		return 0;
 
 	return attr->mode;
@@ -427,7 +427,7 @@ m10bmc_sec_status(struct m10bmc_sec *sec, u32 *status)
 	u32 reg_offset, reg_value;
 	int ret;
 
-	reg_offset = (sec->m10bmc->type == M10_N6010) ?
+	reg_offset = (sec->type == N6000BMC_SEC) ?
 		auth_result_reg(sec->m10bmc) : doorbell_reg(sec->m10bmc);
 
 	ret = m10bmc_sys_read(sec->m10bmc, reg_offset, &reg_value);
@@ -454,7 +454,7 @@ m10bmc_sec_progress_status(struct m10bmc_sec *sec, u32 *doorbell,
 
 	*progress = rsu_prog(*doorbell);
 
-	if (sec->m10bmc->type == M10_N6010) {
+	if (sec->type == N6000BMC_SEC) {
 		ret = m10bmc_sys_read(sec->m10bmc,
 				      auth_result_reg(sec->m10bmc),
 				      &auth_reg);
@@ -851,7 +851,7 @@ static int m10bmc_sec_bmc_image_load(struct fpga_sec_mgr *smgr,
 					      DRBL_CONFIG_SEL | DRBL_REBOOT_REQ,
 					      FIELD_PREP(DRBL_CONFIG_SEL, val) |
 					      DRBL_REBOOT_REQ);
-	case N6010BMC_SEC:
+	case N6000BMC_SEC:
 		if (doorbell & PMCI_DRBL_REBOOT_DISABLED)
 			return -EBUSY;
 
@@ -1150,7 +1150,7 @@ m10bmc_sops_create(struct device *dev, enum fpga_sec_type type)
 	sops->cancel = m10bmc_sec_cancel;
 	sops->get_hw_errinfo = m10bmc_sec_hw_errinfo;
 
-	if (type == N6010BMC_SEC) {
+	if (type == N6000BMC_SEC) {
 		sops->write_blk = pmci_sec_write_blk;
 		sops->image_load = pmci_image_load_hndlrs;
 	} else {
@@ -1187,12 +1187,12 @@ static int m10bmc_secure_probe(struct platform_device *pdev)
 	sec->type = type;
 	dev_set_drvdata(&pdev->dev, sec);
 
-	if (type == N6010BMC_SEC && !sec->m10bmc->flash_ops) {
+	if (type == N6000BMC_SEC && !sec->m10bmc->flash_ops) {
 		dev_err(sec->dev, "No flash-ops provided for security manager\n");
 		return -EINVAL;
 	}
 
-	if (type == N6010BMC_SEC)
+	if (type == N6000BMC_SEC)
 		sec->poc = &pmci_power_on_image;
 
 	smgr = devm_fpga_sec_mgr_create(sec->dev, "Max10 BMC Secure Update",
@@ -1227,8 +1227,8 @@ static const struct platform_device_id intel_m10bmc_secure_ids[] = {
 		.driver_data = (unsigned long)N5010BMC_SEC,
 	},
 	{
-		.name = "n6010bmc-secure",
-		.driver_data = (unsigned long)N6010BMC_SEC,
+		.name = "n6000bmc-secure",
+		.driver_data = (unsigned long)N6000BMC_SEC,
 	},
 	{ }
 };
