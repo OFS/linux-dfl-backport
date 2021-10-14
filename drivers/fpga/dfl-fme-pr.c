@@ -82,7 +82,7 @@ static int fme_pr(struct platform_device *pdev, unsigned long arg)
 	if (copy_from_user(&port_pr, argp, minsz))
 		return -EFAULT;
 
-	if (port_pr.argsz < minsz || port_pr.flags)
+	if (port_pr.argsz < minsz || port_pr.flags || !port_pr.buffer_size)
 		return -EINVAL;
 
 	/* get fme header region */
@@ -144,7 +144,7 @@ static int fme_pr(struct platform_device *pdev, unsigned long arg)
 
 	/*
 	 * it allows userspace to reset the PR region's logic by disabling and
-	 * reenabling the bridge to clear things out between accleration runs.
+	 * reenabling the bridge to clear things out between acceleration runs.
 	 * so no need to hold the bridges after partial reconfiguration.
 	 */
 	if (region->get_bridges)
