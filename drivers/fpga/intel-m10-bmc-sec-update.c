@@ -1291,7 +1291,6 @@ static struct platform_driver intel_m10bmc_sec_driver = {
 	.driver = {
 		.name = "intel-m10bmc-sec-update",
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= 0x803
-=======
 		.dev_groups = m10bmc_sec_attr_groups,
 #endif
 	},
