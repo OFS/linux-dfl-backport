@@ -35,6 +35,7 @@ endif
 obj-m += fpga-mgr.o
 obj-m += fpga-bridge.o
 obj-m += fpga-region.o
+obj-m += fpga-image-load.o
 obj-m += dfl.o
 obj-m += dfl-fme.o
 obj-m += dfl-afu.o
@@ -89,6 +90,7 @@ dfl-emif-y := drivers/memory/dfl-emif.o
 fpga-bridge-y := drivers/fpga/fpga-bridge.o
 fpga-mgr-y := drivers/fpga/fpga-mgr.o
 fpga-region-y := drivers/fpga/fpga-region.o
+fpga-image-load-y := drivers/fpga/fpga-image-load.o
 qsfp-mem-y := drivers/net/phy/qsfp-mem.o
 intel-s10-phy-y := drivers/net/phy/intel-s10-phy.o
 intel-m10-bmc-y := drivers/mfd/intel-m10-bmc-core.o
