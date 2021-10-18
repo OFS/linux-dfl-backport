@@ -55,6 +55,7 @@ obj-m += intel-m10-bmc-spi.o
 obj-m += intel-m10-bmc-hwmon.o
 obj-m += intel-m10-bmc-sec-update.o
 obj-m += regmap-indirect-register.o
+obj-m += ptp_dfl_tod.o
 obj-m += s10hssi.o
 obj-m += n5010-phy.o
 obj-m += n5010-hssi.o
@@ -62,6 +63,7 @@ obj-m += intel-m10-bmc-pmci.o
 obj-m += uio_dfl.o
 obj-m += dfl-pci.o
 
+ptp_dfl_tod-y := drivers/ptp/ptp_dfl_tod.o
 regmap-mmio-y := drivers/base/regmap/regmap-mmio.o
 regmap-spi-avmm-y := drivers/base/regmap/regmap-spi-avmm.o
 dfl-y := drivers/fpga/dfl.o
