@@ -9,7 +9,7 @@ fpga
 
     dfl
     dfl-n3000-nios
-    fpga-sec-mgr
+    fpga-image-load
 
 .. only::  subproject and html
 
