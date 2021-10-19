@@ -217,7 +217,7 @@ static struct platform_driver intel_m10bmc_log_driver = {
 	.probe = m10bmc_log_probe,
 	.remove = m10bmc_log_remove,
 	.driver = {
-		.name = "n6010bmc-log",
+		.name = "n6000bmc-log",
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= 0x803
 		.dev_groups = m10bmc_log_groups,
 #endif
