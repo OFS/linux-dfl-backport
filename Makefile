@@ -15,13 +15,6 @@ RPMBUILDOPTS = -bb --build-in-place \
                --define '_build_name_fmt %%{NAME}-%%{VERSION}-%%{RELEASE}.%%{ARCH}.rpm' \
                --define '_modules $(reverse)'
 
-ifeq ($(BACKPORT_VERSION),)
-ifneq ($(wildcard .git),)
-BACKPORT_VERSION := $(shell git describe --always --tags --dirty | sed -E 's/^v//;s/([^-]*-g)/r\1/;s/-/./g;s/\.rc/rc/')
-endif
-endif
-
-export BACKPORT_VERSION
 
 ifndef CONFIG_REGMAP_MMIO
 obj-m += regmap-mmio.o
