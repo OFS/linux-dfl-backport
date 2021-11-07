@@ -61,14 +61,45 @@ struct image_load {
 	int (*load_image)(struct m10bmc_sec *sec);
 };
 
+static int
+m10bmc_sec_status(struct m10bmc_sec *sec, u32 *status)
+{
+	u32 reg_offset, reg_value;
+	int ret;
+
+	reg_offset = (sec->type == N6000BMC_SEC) ?
+		auth_result_reg(sec->m10bmc) : doorbell_reg(sec->m10bmc);
+
+	ret = m10bmc_sys_read(sec->m10bmc, reg_offset, &reg_value);
+	if (ret)
+		return ret;
+
+	*status = rsu_stat(reg_value);
+
+	return 0;
+}
+
 static void log_error_regs(struct m10bmc_sec *sec, u32 doorbell)
 {
-	u32 auth_result;
+	u32 auth_result, status;
 
 	dev_err(sec->dev, "RSU error status: 0x%08x\n", doorbell);
 
 	if (!m10bmc_sys_read(sec->m10bmc, auth_result_reg(sec->m10bmc), &auth_result))
 		dev_err(sec->dev, "RSU auth result: 0x%08x\n", auth_result);
+
+	if (m10bmc_sec_status(sec, &status))
+		return;
+
+	if (status == RSU_STAT_SDM_PR_FAILED) {
+		if (!m10bmc_sys_read(sec->m10bmc, M10BMC_PMCI_SDM_PR_STS, &status))
+			dev_err(sec->dev, "SDM Key Program Status: 0x%08x\n",
+				status);
+	} else if (status == RSU_STAT_SDM_SR_SDM_FAILED) {
+		if (!m10bmc_sys_read(sec->m10bmc, M10BMC_PMCI_CERT_STS, &status))
+			dev_err(sec->dev, "Certificate Program Status: 0x%08x\n",
+				status);
+	}
 }
 
 static int m10bmc_sec_bmc_image_load(struct m10bmc_sec *sec,
@@ -137,6 +168,14 @@ static int pmci_sec_fpga_image_load(struct m10bmc_sec *sec,
 				  PMCI_FPGA_RECONF_PAGE | PMCI_FPGA_RP_LOAD,
 				  FIELD_PREP(PMCI_FPGA_RECONF_PAGE, val) |
 				  PMCI_FPGA_RP_LOAD);
+}
+
+static int pmci_sec_sdm_image_load(struct m10bmc_sec *sec)
+{
+	return regmap_update_bits(sec->m10bmc->regmap,
+				  m10bmc_base(sec->m10bmc) +
+				  M10BMC_PMCI_SDM_CTRL_STS,
+				  PMCI_SDM_IMG_REQ, PMCI_SDM_IMG_REQ);
 }
 
 static int m10bmc_sec_bmc_image_load_0(struct m10bmc_sec *sec)
@@ -377,6 +416,10 @@ static struct image_load pmci_image_load_hndlrs[] = {
 		.name = "fpga_user2",
 		.load_image = pmci_sec_fpga_image_load_2,
 	},
+	{
+		.name = "sdm",
+		.load_image = pmci_sec_sdm_image_load,
+	},
 	{}
 };
 
@@ -525,6 +568,36 @@ exit_free:
 }
 static DEVICE_ATTR_RO(flash_count);
 
+static ssize_t
+sdm_sr_provision_status_show(struct device *dev,
+			     struct device_attribute *attr, char *buf)
+{
+	struct m10bmc_sec *sec = dev_get_drvdata(dev);
+	u32 status;
+	int ret;
+
+	ret = m10bmc_sys_read(sec->m10bmc, m10bmc_base(sec->m10bmc) +
+			      M10BMC_PMCI_SDM_CTRL_STS, &status);
+	if (ret)
+		return ret;
+
+	return sysfs_emit(buf, "0x%x\n",
+			  (unsigned int)FIELD_GET(PMCI_SDM_PGM_ERROR, status));
+}
+static DEVICE_ATTR_RO(sdm_sr_provision_status);
+
+static umode_t
+m10bmc_security_is_visible(struct kobject *kobj, struct attribute *attr, int n)
+{
+	struct m10bmc_sec *sec = dev_get_drvdata(kobj_to_dev(kobj));
+
+	if (sec->type != N6000BMC_SEC &&
+	    attr == &dev_attr_sdm_sr_provision_status.attr)
+		return 0;
+
+	return attr->mode;
+}
+
 static struct attribute *m10bmc_security_attrs[] = {
 	&dev_attr_flash_count.attr,
 	&dev_attr_bmc_root_entry_hash.attr,
@@ -533,12 +606,14 @@ static struct attribute *m10bmc_security_attrs[] = {
 	&dev_attr_sr_canceled_csks.attr,
 	&dev_attr_pr_canceled_csks.attr,
 	&dev_attr_bmc_canceled_csks.attr,
+	&dev_attr_sdm_sr_provision_status.attr,
 	NULL,
 };
 
 static struct attribute_group m10bmc_security_attr_group = {
 	.name = "security",
 	.attrs = m10bmc_security_attrs,
+	.is_visible = m10bmc_security_is_visible,
 };
 
 static enum fpga_image
@@ -726,8 +801,7 @@ static ssize_t image_load_store(struct device *dev,
 static DEVICE_ATTR_WO(image_load);
 
 static umode_t
-m10bmc_is_visible(struct kobject *kobj,
-		  struct attribute *attr, int n)
+m10bmc_image_is_visible(struct kobject *kobj, struct attribute *attr, int n)
 {
 	struct m10bmc_sec *sec = dev_get_drvdata(kobj_to_dev(kobj));
 
@@ -752,7 +826,7 @@ static struct attribute *m10bmc_control_attrs[] = {
 static struct attribute_group m10bmc_control_attr_group = {
 	.name = "control",
 	.attrs = m10bmc_control_attrs,
-	.is_visible = m10bmc_is_visible,
+	.is_visible = m10bmc_image_is_visible,
 };
 
 static const struct attribute_group *m10bmc_sec_attr_groups[] = {
@@ -781,24 +855,6 @@ static bool rsu_progress_busy(u32 progress)
 		progress == RSU_PROG_COPYING ||
 		progress == RSU_PROG_UPDATE_CANCEL ||
 		progress == RSU_PROG_PROGRAM_KEY_HASH);
-}
-
-static int
-m10bmc_sec_status(struct m10bmc_sec *sec, u32 *status)
-{
-	u32 reg_offset, reg_value;
-	int ret;
-
-	reg_offset = (sec->type == N6000BMC_SEC) ?
-		auth_result_reg(sec->m10bmc) : doorbell_reg(sec->m10bmc);
-
-	ret = m10bmc_sys_read(sec->m10bmc, reg_offset, &reg_value);
-	if (ret)
-		return ret;
-
-	*status = rsu_stat(reg_value);
-
-	return 0;
 }
 
 static int

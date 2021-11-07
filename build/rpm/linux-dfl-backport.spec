@@ -1,12 +1,15 @@
 Name:               linux-dfl-backport
-Version:            %{getenv:BACKPORT_VERSION}
-Release:            1
 Summary:            Backported fpga drivers from linux-dfl
 License:            GPLv2
 Group:              System/Kernel and hardware
 URL:                https://github.com/OPAE/linux-dfl-backport/
 BuildArch:          noarch
 Requires:           dkms, (kernel-devel if kernel), (kernel-rt-devel if kernel-rt)
+
+%define os_branch   rhel8
+%define lts_tag     v5.10.75
+Release:            2
+Version:            %{os_branch}_%{lts_tag}
 
 %define _dstdir %{_usrsrc}/linux-dfl-backport-%{version}-%{release}
 %define _pkgdir %{buildroot}%{_dstdir}
