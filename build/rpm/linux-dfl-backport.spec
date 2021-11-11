@@ -9,7 +9,7 @@ Requires:           (kernel-devel if kernel), (kernel-rt-devel if kernel-rt)
 
 %define os_branch   rhel8
 %define lts_tag     v5.10.75
-Release:            5
+Release:            6
 Version:            %{os_branch}_%{lts_tag}
 
 %define _dstdir %{_usrsrc}/linux-dfl-backport-%{version}-%{release}
@@ -30,6 +30,7 @@ echo 'omit_drivers+="%_modules"' > %{buildroot}%{_dracut}
 %post
 dkms add %{name}/%{version}-%{release} --rpm_safe_upgrade
 dkms install %{name}/%{version}-%{release} --rpm_safe_upgrade
+modprobe -a dfl_pci
 
 %preun
 make -C %{_dstdir} rmmod
