@@ -4,11 +4,12 @@ License:            GPLv2
 Group:              System/Kernel and hardware
 URL:                https://github.com/OPAE/linux-dfl-backport/
 BuildArch:          noarch
-Requires:           dkms, (kernel-devel if kernel), (kernel-rt-devel if kernel-rt)
+Requires:           dkms >= 3.0.0
+Requires:           (kernel-devel if kernel), (kernel-rt-devel if kernel-rt)
 
 %define os_branch   rhel8
 %define lts_tag     v5.10.75
-Release:            2
+Release:            6
 Version:            %{os_branch}_%{lts_tag}
 
 %define _dstdir %{_usrsrc}/linux-dfl-backport-%{version}-%{release}
@@ -27,12 +28,13 @@ install -d $(dirname %{buildroot}%{_dracut})
 echo 'omit_drivers+="%_modules"' > %{buildroot}%{_dracut}
 
 %post
-dkms add %{name}/%{version}-%{release} --rpm_safe_upgrade --no-initrd
-dkms install %{name}/%{version}-%{release} --rpm_safe_upgrade --no-initrd
+dkms add %{name}/%{version}-%{release} --rpm_safe_upgrade
+dkms install %{name}/%{version}-%{release} --rpm_safe_upgrade
+modprobe -a dfl_pci
 
 %preun
 make -C %{_dstdir} rmmod
-dkms remove %{name}/%{version}-%{release} --rpm_safe_upgrade --no-initrd --all
+dkms remove %{name}/%{version}-%{release} --rpm_safe_upgrade --all
 
 %postun
 rmdir %{_dstdir}
