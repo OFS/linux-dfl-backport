@@ -8,8 +8,8 @@ Requires:           dkms >= 3.0.0
 Requires:           (kernel-devel if kernel), (kernel-rt-devel if kernel-rt)
 
 %define os_branch   rhel8
-%define lts_tag     v5.10.75
-Release:            6
+%define lts_tag     v5.10.78
+Release:            1
 Version:            %{os_branch}_%{lts_tag}
 
 %define _dstdir %{_usrsrc}/linux-dfl-backport-%{version}-%{release}
