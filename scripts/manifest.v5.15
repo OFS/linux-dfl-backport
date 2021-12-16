@@ -78,7 +78,9 @@ drivers/ptp/Kconfig
 drivers/ptp/Makefile
 drivers/spi/Kconfig
 drivers/spi/Makefile
-drivers/spi/spi-altera.c
+drivers/spi/spi-altera-core.c
+drivers/spi/spi-altera-dfl.c
+drivers/spi/spi-altera-platform.c
 drivers/uio/Kconfig
 drivers/uio/Makefile
 drivers/uio/uio_dfl.c
