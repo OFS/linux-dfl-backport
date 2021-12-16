@@ -11,6 +11,7 @@
 #ifdef __KERNEL__
 #include <linux/types.h>
 #include <linux/uuid.h>
+#include <linux/version.h>
 typedef unsigned long kernel_ulong_t;
 #endif
 
@@ -45,7 +46,9 @@ struct pci_device_id {
 	__u32 subvendor, subdevice;	/* Subsystem ID's or PCI_ANY_ID */
 	__u32 class, class_mask;	/* (class,subclass,prog-if) triplet */
 	kernel_ulong_t driver_data;	/* Data private to the driver */
+#if RHEL_RELEASE_CODE > RHEL_RELEASE_VERSION(9,0)
 	__u32 override_only;
+#endif
 };
 
 
