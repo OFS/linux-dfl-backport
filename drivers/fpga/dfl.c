@@ -14,6 +14,7 @@
 #include <linux/fpga-dfl.h>
 #include <linux/module.h>
 #include <linux/uaccess.h>
+#include <linux/version.h>
 
 #include "dfl.h"
 
@@ -284,13 +285,21 @@ static int dfl_bus_probe(struct device *dev)
 	return ddrv->probe(ddev);
 }
 
+#if RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(9,1)
+static int dfl_bus_remove(struct device *dev)
+#else
 static void dfl_bus_remove(struct device *dev)
+#endif
 {
 	struct dfl_driver *ddrv = to_dfl_drv(dev->driver);
 	struct dfl_device *ddev = to_dfl_dev(dev);
 
 	if (ddrv->remove)
 		ddrv->remove(ddev);
+
+#if RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(9,1)
+	return 0;
+#endif
 }
 
 static int dfl_bus_uevent(struct device *dev, struct kobj_uevent_env *env)
