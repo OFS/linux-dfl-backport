@@ -26,6 +26,7 @@ echo 'omit_drivers+="%_modules"' > %{buildroot}%{_dracut}
 %post
 dkms add %{name}/%{version}-%{release} --rpm_safe_upgrade --no-initrd
 dkms install %{name}/%{version}-%{release} --rpm_safe_upgrade --no-initrd
+modprobe -a dfl_pci
 
 %preun
 make -C %{_dstdir} rmmod
