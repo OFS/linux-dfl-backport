@@ -241,7 +241,11 @@ static int dfl_tod_get_time(struct ptp_clock_info *ptp, struct timespec64 *ts)
 	seconds = (((u64)(seconds_msb & 0x0000ffff)) << 32) | seconds_lsb;
 
 	ts->tv_nsec = nanosec;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 5, 0)
 	ts->tv_sec = (__kernel_old_time_t)seconds;
+#else
+	ts->tv_sec = (__kernel_time_t)seconds;
+#endif        
 
 	return 0;
 }
@@ -347,6 +351,7 @@ static struct dfl_driver dfl_tod_driver = {
 };
 module_dfl_driver(dfl_tod_driver);
 
+MODULE_ALIAS("dfl:t0000f0022");
 MODULE_DESCRIPTION("DFL ToD driver");
 MODULE_AUTHOR("Intel Corporation");
 MODULE_LICENSE("GPL v2");
