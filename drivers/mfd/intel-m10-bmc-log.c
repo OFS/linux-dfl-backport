@@ -17,6 +17,7 @@ struct m10bmc_log {
 	struct device *dev;
 	struct intel_m10bmc *m10bmc;
 	unsigned int freq_s;		/* update frequency in seconds */
+	int id;
 	struct delayed_work dwork;
 	struct nvmem_device *bmc_event_log_nvmem;
 	struct nvmem_device *fpga_image_dir_nvmem;
@@ -26,6 +27,9 @@ struct m10bmc_log {
 #define M10BMC_TIMESTAMP_FREQ   60	/* 60 seconds between updates */
 #define TIME_LOW	GENMASK(31, 0)
 #define TIME_HIGH	GENMASK(63, 32)
+
+static DEFINE_IDA(m10bmc_log_ida);
+
 static void m10bmc_log_time_sync(struct work_struct *work)
 {
 	struct delayed_work *dwork;
@@ -158,10 +162,16 @@ static struct nvmem_config bom_info_nvmem_config = {
 static int m10bmc_log_probe(struct platform_device *pdev)
 {
 	struct m10bmc_log *ddata;
+	struct nvmem_config nvconfig;
+	int ret = 0;
 
 	ddata = devm_kzalloc(&pdev->dev, sizeof(*ddata), GFP_KERNEL);
 	if (!ddata)
 		return -ENOMEM;
+
+	ddata->id = ida_simple_get(&m10bmc_log_ida, 0, 0, GFP_KERNEL);
+	if (ddata->id < 0)
+		return -EINVAL;
 
 	ddata->dev = &pdev->dev;
 	ddata->m10bmc = dev_get_drvdata(pdev->dev.parent);
@@ -171,36 +181,56 @@ static int m10bmc_log_probe(struct platform_device *pdev)
 
 	m10bmc_log_time_sync(&ddata->dwork.work);
 
-	bmc_event_log_nvmem_config.dev = ddata->dev;
-	bmc_event_log_nvmem_config.priv = ddata;
+	memcpy(&nvconfig, &bmc_event_log_nvmem_config, sizeof(bmc_event_log_nvmem_config));
+	nvconfig.dev = ddata->dev;
+	nvconfig.id = ddata->id;
+	nvconfig.priv = ddata;
 
-	ddata->bmc_event_log_nvmem = devm_nvmem_register(ddata->dev, &bmc_event_log_nvmem_config);
-	if (IS_ERR(ddata->bmc_event_log_nvmem))
-		return PTR_ERR(ddata->bmc_event_log_nvmem);
+	ddata->bmc_event_log_nvmem = devm_nvmem_register(ddata->dev, &nvconfig);
+	if (IS_ERR(ddata->bmc_event_log_nvmem)) {
+		ret = PTR_ERR(ddata->bom_info_nvmem);
+		goto error_exit;
+	}
 
-	fpga_image_dir_nvmem_config.dev = ddata->dev;
-	fpga_image_dir_nvmem_config.priv = ddata;
+	memcpy(&nvconfig, &fpga_image_dir_nvmem_config, sizeof(fpga_image_dir_nvmem_config));
+	nvconfig.dev = ddata->dev;
+	nvconfig.id = ddata->id;
+	nvconfig.priv = ddata;
 
-	ddata->fpga_image_dir_nvmem = devm_nvmem_register(ddata->dev, &fpga_image_dir_nvmem_config);
-	if (IS_ERR(ddata->fpga_image_dir_nvmem))
-		return PTR_ERR(ddata->fpga_image_dir_nvmem);
+	ddata->fpga_image_dir_nvmem = devm_nvmem_register(ddata->dev, &nvconfig);
+	if (IS_ERR(ddata->fpga_image_dir_nvmem)) {
+		ret = PTR_ERR(ddata->bom_info_nvmem);
+		goto error_exit;
+	}
 
-	bom_info_nvmem_config.dev = ddata->dev;
-	bom_info_nvmem_config.priv = ddata;
+	memcpy(&nvconfig, &bom_info_nvmem_config, sizeof(bom_info_nvmem_config));
+	nvconfig.dev = ddata->dev;
+	nvconfig.id = ddata->id;
+	nvconfig.priv = ddata;
 
-	ddata->bom_info_nvmem = devm_nvmem_register(ddata->dev, &bom_info_nvmem_config);
-	if (IS_ERR(ddata->bom_info_nvmem))
-		return PTR_ERR(ddata->bom_info_nvmem);
+	ddata->bom_info_nvmem = devm_nvmem_register(ddata->dev, &nvconfig);
+	if (IS_ERR(ddata->bom_info_nvmem)) {
+		ret = PTR_ERR(ddata->bom_info_nvmem);
+		goto error_exit;
+	}
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
-	return device_add_groups(&pdev->dev, m10bmc_log_groups);
-#else
-	return 0;
+	ret = device_add_groups(&pdev->dev, m10bmc_log_groups);
 #endif
+
+error_exit:
+
+	if (ret)
+		ida_simple_remove(&m10bmc_log_ida, ddata->id);
+
+	return ret;
 }
 
 static int m10bmc_log_remove(struct platform_device *pdev)
 {
 	struct m10bmc_log *ddata = dev_get_drvdata(&pdev->dev);
+
+	ida_simple_remove(&m10bmc_log_ida, ddata->id);
 
 	cancel_delayed_work_sync(&ddata->dwork);
 	return 0;
