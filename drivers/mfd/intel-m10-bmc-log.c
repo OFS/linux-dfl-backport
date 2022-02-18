@@ -13,12 +13,24 @@
 #include <linux/nvmem-provider.h>
 #include <linux/mod_devicetable.h>
 
+struct m10bmc_log_cfg {
+	int el_size;
+	unsigned long el_off;
+
+	int id_size;
+	unsigned long id_off;
+
+	int bi_size;
+	unsigned long bi_off;
+};
+
 struct m10bmc_log {
 	struct device *dev;
 	struct intel_m10bmc *m10bmc;
 	unsigned int freq_s;		/* update frequency in seconds */
 	int id;
 	struct delayed_work dwork;
+	struct m10bmc_log_cfg *log_cfg;
 	struct nvmem_device *bmc_event_log_nvmem;
 	struct nvmem_device *fpga_image_dir_nvmem;
 	struct nvmem_device *bom_info_nvmem;
@@ -116,7 +128,7 @@ static int bmc_event_log_nvmem_read(void *priv, unsigned int off,
 {
 	struct m10bmc_log *ddata = priv;
 
-	return bmc_nvmem_read(ddata, PMCI_ERROR_LOG_ADDR, off, val, count);
+	return bmc_nvmem_read(ddata, ddata->log_cfg->el_off, off, val, count);
 }
 
 static int fpga_image_dir_nvmem_read(void *priv, unsigned int off,
@@ -124,7 +136,7 @@ static int fpga_image_dir_nvmem_read(void *priv, unsigned int off,
 {
 	struct m10bmc_log *ddata = priv;
 
-	return bmc_nvmem_read(ddata, PMCI_FPGA_IMAGE_DIR_ADDR, off, val, count);
+	return bmc_nvmem_read(ddata, ddata->log_cfg->id_off, off, val, count);
 }
 
 static int bom_info_nvmem_read(void *priv, unsigned int off,
@@ -132,14 +144,13 @@ static int bom_info_nvmem_read(void *priv, unsigned int off,
 {
 	struct m10bmc_log *ddata = priv;
 
-	return bmc_nvmem_read(ddata, PMCI_BOM_INFO_ADDR, off, val, count);
+	return bmc_nvmem_read(ddata, ddata->log_cfg->bi_off, off, val, count);
 }
 
 static struct nvmem_config bmc_event_log_nvmem_config = {
 	.name = "bmc_event_log",
 	.stride = 4,
 	.word_size = 1,
-	.size = PMCI_ERROR_LOG_SIZE,
 	.reg_read = bmc_event_log_nvmem_read,
 };
 
@@ -147,7 +158,6 @@ static struct nvmem_config fpga_image_dir_nvmem_config = {
 	.name = "fpga_image_directory",
 	.stride = 4,
 	.word_size = 1,
-	.size = PMCI_FPGA_IMAGE_DIR_SIZE,
 	.reg_read = fpga_image_dir_nvmem_read,
 };
 
@@ -155,12 +165,12 @@ static struct nvmem_config bom_info_nvmem_config = {
 	.name = "bom_info",
 	.stride = 4,
 	.word_size = 1,
-	.size = PMCI_BOM_INFO_SIZE,
 	.reg_read = bom_info_nvmem_read,
 };
 
 static int m10bmc_log_probe(struct platform_device *pdev)
 {
+	const struct platform_device_id *id = platform_get_device_id(pdev);
 	struct m10bmc_log *ddata;
 	struct nvmem_config nvconfig;
 	int ret = 0;
@@ -177,41 +187,51 @@ static int m10bmc_log_probe(struct platform_device *pdev)
 	ddata->m10bmc = dev_get_drvdata(pdev->dev.parent);
 	ddata->freq_s = M10BMC_TIMESTAMP_FREQ;
 	INIT_DELAYED_WORK(&ddata->dwork, m10bmc_log_time_sync);
+	ddata->log_cfg = (struct m10bmc_log_cfg *)id->driver_data;
 	dev_set_drvdata(&pdev->dev, ddata);
 
-	m10bmc_log_time_sync(&ddata->dwork.work);
+	if (ddata->log_cfg->el_size > 0) {
+		m10bmc_log_time_sync(&ddata->dwork.work);
 
-	memcpy(&nvconfig, &bmc_event_log_nvmem_config, sizeof(bmc_event_log_nvmem_config));
-	nvconfig.dev = ddata->dev;
-	nvconfig.id = ddata->id;
-	nvconfig.priv = ddata;
+		memcpy(&nvconfig, &bmc_event_log_nvmem_config, sizeof(bmc_event_log_nvmem_config));
+		nvconfig.dev = ddata->dev;
+                nvconfig.id = ddata->id;
+		nvconfig.priv = ddata;
+		nvconfig.size = ddata->log_cfg->el_size;
 
-	ddata->bmc_event_log_nvmem = devm_nvmem_register(ddata->dev, &nvconfig);
-	if (IS_ERR(ddata->bmc_event_log_nvmem)) {
-		ret = PTR_ERR(ddata->bom_info_nvmem);
-		goto error_exit;
+		ddata->bmc_event_log_nvmem = devm_nvmem_register(ddata->dev, &nvconfig);
+		if (IS_ERR(ddata->bmc_event_log_nvmem)) {
+			ret = PTR_ERR(ddata->bmc_event_log_nvmem);
+                        goto error_exit;
+                }
 	}
 
-	memcpy(&nvconfig, &fpga_image_dir_nvmem_config, sizeof(fpga_image_dir_nvmem_config));
-	nvconfig.dev = ddata->dev;
-	nvconfig.id = ddata->id;
-	nvconfig.priv = ddata;
+	if (ddata->log_cfg->id_size > 0) {
+		memcpy(&nvconfig, &fpga_image_dir_nvmem_config, sizeof(fpga_image_dir_nvmem_config));
+		nvconfig.dev = ddata->dev;
+                nvconfig.id = ddata->id;
+		nvconfig.priv = ddata;
+		nvconfig.size = ddata->log_cfg->id_size;
 
-	ddata->fpga_image_dir_nvmem = devm_nvmem_register(ddata->dev, &nvconfig);
-	if (IS_ERR(ddata->fpga_image_dir_nvmem)) {
-		ret = PTR_ERR(ddata->bom_info_nvmem);
-		goto error_exit;
+		ddata->fpga_image_dir_nvmem = devm_nvmem_register(ddata->dev, &nvconfig);
+		if (IS_ERR(ddata->fpga_image_dir_nvmem)) {
+			ret = PTR_ERR(ddata->fpga_image_dir_nvmem);
+                        goto error_exit;
+                }
 	}
 
-	memcpy(&nvconfig, &bom_info_nvmem_config, sizeof(bom_info_nvmem_config));
-	nvconfig.dev = ddata->dev;
-	nvconfig.id = ddata->id;
-	nvconfig.priv = ddata;
+	if (ddata->log_cfg->bi_size > 0) {
+		memcpy(&nvconfig, &bom_info_nvmem_config, sizeof(bom_info_nvmem_config));
+		nvconfig.dev = ddata->dev;
+                nvconfig.id = ddata->id;
+		nvconfig.priv = ddata;
+		nvconfig.size = ddata->log_cfg->bi_size;
 
-	ddata->bom_info_nvmem = devm_nvmem_register(ddata->dev, &nvconfig);
-	if (IS_ERR(ddata->bom_info_nvmem)) {
-		ret = PTR_ERR(ddata->bom_info_nvmem);
-		goto error_exit;
+		ddata->bom_info_nvmem = devm_nvmem_register(ddata->dev, &nvconfig);
+		if (IS_ERR(ddata->bom_info_nvmem)) {
+			ret = PTR_ERR(ddata->bom_info_nvmem);
+                        goto error_exit;
+                }
 	}
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
@@ -236,9 +256,21 @@ static int m10bmc_log_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static const struct m10bmc_log_cfg n6000_cfg = {
+	.el_size = PMCI_ERROR_LOG_SIZE,
+	.el_off = PMCI_ERROR_LOG_ADDR,
+
+	.id_size = PMCI_FPGA_IMAGE_DIR_SIZE,
+	.id_off = PMCI_FPGA_IMAGE_DIR_ADDR,
+
+	.bi_size = PMCI_BOM_INFO_SIZE,
+	.bi_off = PMCI_BOM_INFO_ADDR,
+};
+
 static const struct platform_device_id intel_m10bmc_log_ids[] = {
 	{
 		.name = "n6000bmc-log",
+		.driver_data = (unsigned long)&n6000_cfg,
 	},
 	{ }
 };
@@ -247,11 +279,12 @@ static struct platform_driver intel_m10bmc_log_driver = {
 	.probe = m10bmc_log_probe,
 	.remove = m10bmc_log_remove,
 	.driver = {
-		.name = "n6000bmc-log",
+		.name = "intel-m10-bmc-log",
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= 0x803
 		.dev_groups = m10bmc_log_groups,
 #endif
 	},
+	.id_table = intel_m10bmc_log_ids,
 };
 module_platform_driver(intel_m10bmc_log_driver);
 
