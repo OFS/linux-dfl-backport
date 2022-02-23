@@ -11,10 +11,15 @@
 #ifdef __KERNEL__
 #include <linux/types.h>
 #include <linux/uuid.h>
+#include <linux/version.h>
 typedef unsigned long kernel_ulong_t;
 #endif
 
 #define PCI_ANY_ID (~0)
+
+enum {
+	PCI_ID_F_VFIO_DRIVER_OVERRIDE = 1,
+};
 
 /**
  * struct pci_device_id - PCI device ID structure
@@ -34,12 +39,16 @@ typedef unsigned long kernel_ulong_t;
  *			Best practice is to use driver_data as an index
  *			into a static list of equivalent device types,
  *			instead of using it as a pointer.
+ * @override_only:	Match only when dev->driver_override is this driver.
  */
 struct pci_device_id {
 	__u32 vendor, device;		/* Vendor and device ID or PCI_ANY_ID*/
 	__u32 subvendor, subdevice;	/* Subsystem ID's or PCI_ANY_ID */
 	__u32 class, class_mask;	/* (class,subclass,prog-if) triplet */
 	kernel_ulong_t driver_data;	/* Data private to the driver */
+#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 14, 0) || RHEL_RELEASE_CODE > 0x900
+	__u32 override_only;
+#endif
 };
 
 
@@ -447,6 +456,7 @@ struct hv_vmbus_device_id {
 
 struct rpmsg_device_id {
 	char name[RPMSG_NAME_SIZE];
+	kernel_ulong_t driver_data;
 };
 
 /* i2c */
@@ -838,6 +848,32 @@ struct mhi_device_id {
 	kernel_ulong_t driver_data;
 };
 
+#define AUXILIARY_NAME_SIZE 32
+#define AUXILIARY_MODULE_PREFIX "auxiliary:"
+
+struct auxiliary_device_id {
+	char name[AUXILIARY_NAME_SIZE];
+	kernel_ulong_t driver_data;
+};
+
+/* Surface System Aggregator Module */
+
+#define SSAM_MATCH_TARGET	0x1
+#define SSAM_MATCH_INSTANCE	0x2
+#define SSAM_MATCH_FUNCTION	0x4
+
+struct ssam_device_id {
+	__u8 match_flags;
+
+	__u8 domain;
+	__u8 category;
+	__u8 target;
+	__u8 instance;
+	__u8 function;
+
+	kernel_ulong_t driver_data;
+};
+
 /*
  * DFL (Device Feature List)
  *
@@ -859,7 +895,7 @@ struct mhi_device_id {
 struct dfl_device_id {
 	__u16 type;
 	__u16 feature_id;
-	unsigned long driver_data;
+	kernel_ulong_t driver_data;
 };
 
 #endif /* LINUX_MOD_DEVICETABLE_H */
