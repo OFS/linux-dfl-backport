@@ -137,6 +137,7 @@ static struct nvmem_config bmc_event_log_nvmem_config = {
 	.word_size = 1,
 	.size = PMCI_ERROR_LOG_SIZE,
 	.reg_read = bmc_event_log_nvmem_read,
+	.id = NVMEM_DEVID_AUTO,
 };
 
 static struct nvmem_config fpga_image_dir_nvmem_config = {
@@ -145,6 +146,7 @@ static struct nvmem_config fpga_image_dir_nvmem_config = {
 	.word_size = 1,
 	.size = PMCI_FPGA_IMAGE_DIR_SIZE,
 	.reg_read = fpga_image_dir_nvmem_read,
+	.id = NVMEM_DEVID_AUTO,
 };
 
 static struct nvmem_config bom_info_nvmem_config = {
@@ -153,11 +155,13 @@ static struct nvmem_config bom_info_nvmem_config = {
 	.word_size = 1,
 	.size = PMCI_BOM_INFO_SIZE,
 	.reg_read = bom_info_nvmem_read,
+	.id = NVMEM_DEVID_AUTO,
 };
 
 static int m10bmc_log_probe(struct platform_device *pdev)
 {
 	struct m10bmc_log *ddata;
+	struct nvmem_config nvconfig;
 
 	ddata = devm_kzalloc(&pdev->dev, sizeof(*ddata), GFP_KERNEL);
 	if (!ddata)
@@ -171,24 +175,27 @@ static int m10bmc_log_probe(struct platform_device *pdev)
 
 	m10bmc_log_time_sync(&ddata->dwork.work);
 
-	bmc_event_log_nvmem_config.dev = ddata->dev;
-	bmc_event_log_nvmem_config.priv = ddata;
+	memcpy(&nvconfig, &bmc_event_log_nvmem_config, sizeof(bmc_event_log_nvmem_config));
+	nvconfig.dev = ddata->dev;
+	nvconfig.priv = ddata;
 
-	ddata->bmc_event_log_nvmem = devm_nvmem_register(ddata->dev, &bmc_event_log_nvmem_config);
+	ddata->bmc_event_log_nvmem = devm_nvmem_register(ddata->dev, &nvconfig);
 	if (IS_ERR(ddata->bmc_event_log_nvmem))
 		return PTR_ERR(ddata->bmc_event_log_nvmem);
 
-	fpga_image_dir_nvmem_config.dev = ddata->dev;
-	fpga_image_dir_nvmem_config.priv = ddata;
+	memcpy(&nvconfig, &fpga_image_dir_nvmem_config, sizeof(fpga_image_dir_nvmem_config));
+	nvconfig.dev = ddata->dev;
+	nvconfig.priv = ddata;
 
-	ddata->fpga_image_dir_nvmem = devm_nvmem_register(ddata->dev, &fpga_image_dir_nvmem_config);
+	ddata->fpga_image_dir_nvmem = devm_nvmem_register(ddata->dev, &nvconfig);
 	if (IS_ERR(ddata->fpga_image_dir_nvmem))
 		return PTR_ERR(ddata->fpga_image_dir_nvmem);
 
-	bom_info_nvmem_config.dev = ddata->dev;
-	bom_info_nvmem_config.priv = ddata;
+	memcpy(&nvconfig, &bom_info_nvmem_config, sizeof(bom_info_nvmem_config));
+	nvconfig.dev = ddata->dev;
+	nvconfig.priv = ddata;
 
-	ddata->bom_info_nvmem = devm_nvmem_register(ddata->dev, &bom_info_nvmem_config);
+	ddata->bom_info_nvmem = devm_nvmem_register(ddata->dev, &nvconfig);
 	if (IS_ERR(ddata->bom_info_nvmem))
 		return PTR_ERR(ddata->bom_info_nvmem);
 
