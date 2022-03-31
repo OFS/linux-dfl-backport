@@ -285,7 +285,7 @@ static int dfl_bus_probe(struct device *dev)
 	return ddrv->probe(ddev);
 }
 
-#if RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(9,1)
+#if RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(9,2)
 static int dfl_bus_remove(struct device *dev)
 #else
 static void dfl_bus_remove(struct device *dev)
@@ -297,7 +297,7 @@ static void dfl_bus_remove(struct device *dev)
 	if (ddrv->remove)
 		ddrv->remove(ddev);
 
-#if RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(9,1)
+#if RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(9,2)
 	return 0;
 #endif
 }
