@@ -481,6 +481,52 @@ show_root_entry_hash(struct device *dev, u32 exp_magic,
 	return cnt;
 }
 
+static int
+sdm_get_prov_data(struct m10bmc_sec *sec)
+{
+	u32 cmd_ctrl;
+	int ret;
+
+	ret = m10bmc_sys_update_bits(sec->m10bmc,
+				     m10bmc_base(sec->m10bmc) +
+				     M10BMC_PMCI_SDM_CMD_CTRL,
+				     M10BMC_PMCI_SDM_CMD_SEL |
+				     M10BMC_PMCI_SDM_CMD_TRIG,
+				     PMCI_SDM_CMD_GET_PROV |
+				     M10BMC_PMCI_SDM_CMD_TRIG);
+	if (ret)
+		return ret;
+
+	ret = regmap_read_poll_timeout(sec->m10bmc->regmap,
+				       m10bmc_base(sec->m10bmc) +
+				       M10BMC_PMCI_SDM_CMD_CTRL, cmd_ctrl,
+				       (cmd_ctrl & M10BMC_PMCI_SDM_REQ_CLR),
+				       NIOS_HANDSHAKE_INTERVAL_US,
+				       NIOS_HANDSHAKE_TIMEOUT_US);
+	if (ret)
+		return ret;
+
+	ret = regmap_read_poll_timeout(sec->m10bmc->regmap,
+				       m10bmc_base(sec->m10bmc) +
+				       M10BMC_PMCI_SDM_CMD_CTRL, cmd_ctrl,
+				       FIELD_GET(M10BMC_PMCI_SDM_CMD_STATE,
+						 cmd_ctrl) !=
+				       PMCI_SDM_CMD_STATE_IDLE,
+				       NIOS_HANDSHAKE_INTERVAL_US,
+				       NIOS_HANDSHAKE_TIMEOUT_US);
+	if (ret)
+		return ret;
+
+	if (FIELD_GET(M10BMC_PMCI_SDM_CMD_STATE, cmd_ctrl) !=
+	    PMCI_SDM_CMD_SUCCESS) {
+		dev_err(sec->dev, "SDM command error code: %lu\n",
+			FIELD_GET(M10BMC_PMCI_SDM_CMD_STATE, cmd_ctrl));
+		return -EIO;
+	}
+
+	return 0;
+}
+
 #define DEVICE_ATTR_SEC_REH_RO(_name) \
 static ssize_t _name##_root_entry_hash_show(struct device *dev, \
 					    struct device_attribute *attr, \
@@ -505,6 +551,10 @@ show_sdm_root_entry_hash(struct device *dev, u32 start, char *buf)
 	struct m10bmc_sec *sec = dev_get_drvdata(dev);
 	int i, cnt, ret;
 	u32 key;
+
+	ret = sdm_get_prov_data(sec);
+	if (ret)
+		return ret;
 
 	cnt = sprintf(buf, "0x");
 	for (i = 0; i < SDM_ROOT_HASH_REG_NUM; i++) {
@@ -585,6 +635,10 @@ show_sdm_canceled_csk(struct device *dev, u32 addr, char *buf)
 	struct m10bmc_sec *sec = dev_get_drvdata(dev);
 	int ret;
 	u32 val;
+
+	ret = sdm_get_prov_data(sec);
+	if (ret)
+		return ret;
 
 	ret = m10bmc_sys_read(sec->m10bmc,
 			      m10bmc_base(sec->m10bmc) + addr, &val);
