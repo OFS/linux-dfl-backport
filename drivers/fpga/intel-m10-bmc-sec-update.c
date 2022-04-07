@@ -487,24 +487,43 @@ sdm_get_prov_data(struct m10bmc_sec *sec)
 	u32 cmd_ctrl;
 	int ret;
 
+	pr_err("%s: address: 0x%lx\n", __func__,
+	       m10bmc_base(sec->m10bmc) + M10BMC_PMCI_SDM_CMD_CTRL);
+	pr_err("%s: mask: 0x%08lx\n", __func__, 
+	       M10BMC_PMCI_SDM_CMD_SEL | M10BMC_PMCI_SDM_CMD_TRIG);
+
+	cmd_ctrl = FIELD_PREP(M10BMC_PMCI_SDM_CMD_SEL, PMCI_SDM_CMD_GET_PROV);
+	cmd_ctrl |= M10BMC_PMCI_SDM_CMD_TRIG;
+	pr_err("%s: value: 0x%08lx\n", __func__, cmd_ctrl);
 	ret = m10bmc_sys_update_bits(sec->m10bmc,
 				     m10bmc_base(sec->m10bmc) +
 				     M10BMC_PMCI_SDM_CMD_CTRL,
 				     M10BMC_PMCI_SDM_CMD_SEL |
 				     M10BMC_PMCI_SDM_CMD_TRIG,
-				     PMCI_SDM_CMD_GET_PROV |
-				     M10BMC_PMCI_SDM_CMD_TRIG);
-	if (ret)
+				     cmd_ctrl);
+	if (ret) {
+		pr_err("%s: m10bmc_sys_update_bits failed: %d\n",
+		       __func__, ret);
 		return ret;
+	}
 
 	ret = regmap_read_poll_timeout(sec->m10bmc->regmap,
 				       m10bmc_base(sec->m10bmc) +
 				       M10BMC_PMCI_SDM_CMD_CTRL, cmd_ctrl,
-				       (cmd_ctrl & M10BMC_PMCI_SDM_REQ_CLR),
+				       !(cmd_ctrl & M10BMC_PMCI_SDM_CMD_TRIG),
 				       NIOS_HANDSHAKE_INTERVAL_US,
 				       NIOS_HANDSHAKE_TIMEOUT_US);
-	if (ret)
+	if (ret) {
+		pr_err("%s: err1: cmd_ctrl value: 0x%08llx\n",
+		       __func__, cmd_ctrl);
+		pr_err("%s: regmap_read_poll_timeout failed: %d\n",
+		       __func__, ret);
 		return ret;
+	}
+
+// Russ - can I group these both into a single poll? Same register!
+
+	pr_err("%s: dbg2: cmd_ctrl value: 0x%08llx\n", __func__, cmd_ctrl);
 
 	ret = regmap_read_poll_timeout(sec->m10bmc->regmap,
 				       m10bmc_base(sec->m10bmc) +
@@ -514,15 +533,23 @@ sdm_get_prov_data(struct m10bmc_sec *sec)
 				       PMCI_SDM_CMD_STATE_IDLE,
 				       NIOS_HANDSHAKE_INTERVAL_US,
 				       NIOS_HANDSHAKE_TIMEOUT_US);
-	if (ret)
+	if (ret) {
+		pr_err("%s: err2: cmd_ctrl value: 0x%08llx\n",
+		       __func__, cmd_ctrl);
+		pr_err("%s: regmap_read_poll_timeout failed: %d\n",
+		       __func__, ret);
 		return ret;
+	}
 
-	if (FIELD_GET(M10BMC_PMCI_SDM_CMD_STATE, cmd_ctrl) !=
+	pr_err("%s: dbg2: cmd_ctrl value: 0x%08llx\n", __func__, cmd_ctrl);
+
+	if (FIELD_GET(M10BMC_PMCI_SDM_CMD_ERR, cmd_ctrl) !=
 	    PMCI_SDM_CMD_SUCCESS) {
 		dev_err(sec->dev, "SDM command error code: %lu\n",
-			FIELD_GET(M10BMC_PMCI_SDM_CMD_STATE, cmd_ctrl));
+			FIELD_GET(M10BMC_PMCI_SDM_CMD_ERR, cmd_ctrl));
 		return -EIO;
 	}
+	msleep(5 * 1000);
 
 	return 0;
 }
