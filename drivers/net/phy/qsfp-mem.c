@@ -184,6 +184,9 @@ static int qsfp_probe(struct dfl_device *dfl_dev)
 {
 	struct device *dev = &dfl_dev->dev;
 	struct qsfp *qsfp;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
+	int ret;
+#endif
 
 	qsfp = devm_kzalloc(dev, sizeof(*qsfp), GFP_KERNEL);
 	if (!qsfp)
@@ -200,6 +203,12 @@ static int qsfp_probe(struct dfl_device *dfl_dev)
 
 	INIT_DELAYED_WORK(&qsfp->dwork, qsfp_check_hotplug);
 	qsfp_check_hotplug(&qsfp->dwork.work);
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
+	ret = device_add_groups(dev, qsfp_mem_groups);
+        if (ret)
+            return ret;
+#endif
 
 	qsfp->regmap = devm_regmap_init_mmio(dev, qsfp->base, &mmio_cfg);
 	if (IS_ERR(qsfp->regmap))
@@ -228,7 +237,9 @@ static const struct dfl_device_id qsfp_ids[] = {
 static struct dfl_driver qsfp_driver = {
 	.drv = {
 		.name = "qsfp-mem",
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= 0x803
 		.dev_groups = qsfp_mem_groups,
+#endif
 	},
 	.id_table = qsfp_ids,
 	.probe = qsfp_probe,
