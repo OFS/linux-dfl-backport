@@ -1,0 +1,14 @@
+Source: linux-dfl-backport-driver
+Section: kernel
+Priority: optional
+Maintainer: The OPAE Development Team <opae@lists.01.org>
+Standards-Version: 3.9.3
+Homepage: http://www.intel.com
+Build-Depends: debhelper (>= 11)
+
+Package: linux-dfl-backport-driver-dkms
+Architecture: all
+Depends: dkms, linux-headers, libelf-dev
+Recommends: linux-image
+Description: DKMS-enabled Intel FPGA driver source code.
+ Package contains DKMS-enabled source files for the Intel FPGA driver.

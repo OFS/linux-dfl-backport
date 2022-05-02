@@ -1,0 +1,15 @@
+#!/bin/bash
+# Copyright(c) 2022, Intel Corporation
+
+if [ -z "`dkms status -m linux-dfl-backport -v PKGVER`" ]; then
+  echo "Add module source to dkms"
+  dkms add -m linux-dfl-backport -v PKGVER
+fi
+
+# If we haven't loaded a tarball, then try building it for the current kernel
+if [ -e /lib/modules/`uname -r`/build/include ]; then
+  dkms build -m linux-dfl-backport -v PKGVER
+  dkms install -m linux-dfl-backport -v PKGVER --force
+else
+  echo "kernel headers are not installed - skipping module build"
+fi

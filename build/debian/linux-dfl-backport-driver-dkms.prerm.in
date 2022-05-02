@@ -1,0 +1,8 @@
+#!/bin/sh
+# Copyright(c) 2022, Intel Corporation
+
+echo
+echo "Uninstall of linux-dfl-backport module (version PKGVER) beginning:"
+if [ -n "`dkms status -m linux-dfl-backport -v PKGVER`" ]; then
+	dkms remove -m linux-dfl-backport -v PKGVER --all
+fi

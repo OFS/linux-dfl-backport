@@ -1,3 +1,5 @@
+# Copyright(c) 2022, Intel Corporation
+
 KERNEL ?= $(shell uname -r)
 KERNELDIR ?= /lib/modules/$(KERNEL)/build
 LINUXINCLUDE := -I$(src)/include -I$(src)/include/uapi $(LINUXINCLUDE)
@@ -32,6 +34,9 @@ ifndef CONFIG_REGMAP_SPI_AVMM
 obj-m += regmap-spi-avmm.o
 endif
 
+# The module order matters; it determines the module order for
+# both the insmod and rmmod targets. The module order is also
+# leveraged for install packages by the dkms.conf file.
 obj-m += fpga-mgr.o
 obj-m += fpga-bridge.o
 obj-m += fpga-region.o
@@ -146,6 +151,7 @@ $(rules_insmod): insmod_%:
 		insmod $*.ko $(DYNDBG); \
 	fi
 
+# The rmmod target is also invoked directly by dkms
 rmmod: $(rules_rmmod)
 insmod: $(rules_insmod)
 reload: rmmod insmod
@@ -157,6 +163,10 @@ dkms:
 # build rpm packages
 rpm: build/rpm/linux-dfl-backport.spec clean
 	@rpmbuild $(RPMBUILDOPTS) $<
+
+deb: clean
+	python build/debian/deb-changelog.py $(BACKPORT_VERSION) > build/debian/changelog
+	cd build && debuild -uc -us
 
 help:
 	@echo "Build Usage:"

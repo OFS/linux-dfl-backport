@@ -1,0 +1,48 @@
+#!/usr/bin/make -f
+# Copyright(c) 2022, Intel Corporation
+
+PKGVER := $(shell dpkg-parsechangelog | grep '^Version:' | cut -d' ' -f2 | cut -d':' -f2)
+
+build:
+
+install: build
+	dh_testdir
+	dh_installdirs
+	install -d $(CURDIR)/debian/tmp/usr/src/linux-dfl-backport-$(PKGVER)/
+	cp -a ../drivers $(CURDIR)/debian/tmp/usr/src/linux-dfl-backport-$(PKGVER)/
+	cp -a ../include $(CURDIR)/debian/tmp/usr/src/linux-dfl-backport-$(PKGVER)/
+	cp -a ../Makefile $(CURDIR)/debian/tmp/usr/src/linux-dfl-backport-$(PKGVER)/
+	cp -a ../LICENSE $(CURDIR)/debian/tmp/usr/src/linux-dfl-backport-$(PKGVER)/
+	cp -a dkms/dkms-postinst.sh $(CURDIR)/debian/tmp/usr/src/linux-dfl-backport-$(PKGVER)/
+	cp -a dkms/dkms-postrem.sh $(CURDIR)/debian/tmp/usr/src/linux-dfl-backport-$(PKGVER)/
+	cp -a dkms/dkms-preinst.sh $(CURDIR)/debian/tmp/usr/src/linux-dfl-backport-$(PKGVER)/
+	cp -a dkms/generate-dkms-conf.sh $(CURDIR)/debian/tmp/usr/src/linux-dfl-backport-$(PKGVER)/
+	sed -e 's/PKGVER/$(PKGVER)/' dkms/dkms.conf.in > $(CURDIR)/debian/tmp/usr/src/linux-dfl-backport-$(PKGVER)/dkms.conf
+	sed -e 's/PKGVER/$(PKGVER)/' debian/linux-dfl-backport-driver-dkms.postinst.in >$(CURDIR)/debian/linux-dfl-backport-driver-dkms.postinst
+	sed -e 's/PKGVER/$(PKGVER)/' debian/linux-dfl-backport-driver-dkms.prerm.in >$(CURDIR)/debian/linux-dfl-backport-driver-dkms.prerm
+
+binary-indep: install
+	dh_install -plinux-dfl-backport-driver-dkms
+	dh_installchangelogs -i
+	dh_installdeb -i
+	dh_gencontrol -i
+	dh_md5sums -i
+	dh_builddeb -i
+
+binary-arch: install
+	dh_testdir
+	dh_testroot
+	dh_fixperms
+	dh_installchangelogs -a
+	dh_installdeb -a
+	dh_gencontrol -a
+	dh_md5sums -a
+	dh_builddeb -a
+
+binary: binary-arch binary-indep
+
+clean:
+	dh_clean
+	rm -f  Module.symvers
+
+.PHONY: build clean binary-indep binary-arch binary install configure
