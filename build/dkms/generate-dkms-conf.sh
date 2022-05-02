@@ -1,4 +1,5 @@
 #!/bin/sh
+# Copyright(c) 2022, Intel Corporation
 
 src=$1
 conf=$2

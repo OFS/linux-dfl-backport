@@ -1,5 +1,5 @@
 PACKAGE_NAME="linux-dfl-backport"
-PACKAGE_VERSION="5.11"
+PACKAGE_VERSION="PKGVER"
 MAKE[0]="make KERNELDIR=$kernel_source_dir"
 CLEAN="make KERNELDIR=$kernel_source_dir clean"
 AUTOINSTALL="yes"
@@ -7,6 +7,10 @@ REMAKE_INITRD="no"
 
 BUILT_MODULE_NAME="dfl"
 DEST_MODULE_LOCATION="/kernel"
+
+POST_INSTALL=dkms-postinst.sh
+POST_REMOVE=dkms-postrem.sh
+PRE_INSTALL=dkms-preinst.sh
 
 local dkms_dir="$dkms_tree/$PACKAGE_NAME/$PACKAGE_VERSION"
 local dkms_generated_conf="$dkms_dir/dkms-$kernelver-$arch.conf"

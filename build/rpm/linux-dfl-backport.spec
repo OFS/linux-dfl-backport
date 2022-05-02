@@ -18,18 +18,18 @@ https://github.com/OPAE/linux-dfl-backport/.
 
 %install
 install -d %{_pkgdir}
-cp -a build/dkms/generate-dkms-conf.sh Makefile drivers include %{_pkgdir}
-sed -E 's/PACKAGE_VERSION=".+"/PACKAGE_VERSION="%{version}-%{release}"/' build/dkms/dkms.conf > %{_pkgdir}/dkms.conf
+cp -a LICENSE Makefile drivers include %{_pkgdir}
+cp -a build/dkms/dkms-postinst.sh build/dkms/dkms-postrem.sh %{_pkgdir}
+cp -a build/dkms/dkms-preinst.sh build/dkms/generate-dkms-conf.sh %{_pkgdir}
+sed -E 's/PKGVER/%{version}-%{release}/' build/dkms/dkms.conf.in > %{_pkgdir}/dkms.conf
 install -d $(dirname %{buildroot}%{_dracut})
 echo 'omit_drivers+="%_modules"' > %{buildroot}%{_dracut}
 
 %post
 dkms add %{name}/%{version}-%{release} --rpm_safe_upgrade --no-initrd
 dkms install %{name}/%{version}-%{release} --rpm_safe_upgrade --no-initrd
-modprobe -a dfl_pci
 
 %preun
-make -C %{_dstdir} rmmod
 dkms remove %{name}/%{version}-%{release} --rpm_safe_upgrade --no-initrd --all
 
 %postun
