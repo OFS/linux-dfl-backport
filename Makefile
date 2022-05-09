@@ -51,6 +51,7 @@ obj-m += spi-altera-core.o
 obj-m += spi-altera-dfl.o
 obj-m += regmap-indirect-register.o
 obj-m += qsfp-mem.o
+obj-m += 8250_dfl.o
 obj-m += intel-s10-phy.o
 obj-m += intel-m10-bmc.o
 obj-m += intel-m10-bmc-spi.o
@@ -106,6 +107,7 @@ regmap-indirect-register-y := drivers/base/regmap/regmap-indirect-register.o
 n5010-phy-y := drivers/net/ethernet/silicom/n5010-phy.o
 n5010-hssi-y := drivers/net/ethernet/silicom/n5010-hssi.o
 uio-dfl-y := drivers/uio/uio_dfl.o
+8250_dfl-y := drivers/tty/serial/8250/8250_dfl.o
 
 # intermediates used when reversing modules list
 count := $(words $(obj-m))
