@@ -183,6 +183,7 @@ static struct dfl_driver dfl_uart_driver = {
 module_dfl_driver(dfl_uart_driver);
 
 MODULE_DEVICE_TABLE(dfl, dfl_uart_ids);
+MODULE_ALIAS("dfl:t0000f0024");
 MODULE_DESCRIPTION("DFL Intel UART driver");
 MODULE_AUTHOR("Intel Corporation");
 MODULE_LICENSE("GPL");
