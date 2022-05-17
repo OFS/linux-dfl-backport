@@ -55,6 +55,7 @@ obj-m += n5010-hssi.o
 obj-m += intel-m10-bmc-pmci.o
 obj-m += uio_dfl.o
 obj-m += dfl-pci.o
+obj-m += 8250_dfl.o
 
 ptp_dfl_tod-y := drivers/ptp/ptp_dfl_tod.o
 regmap-mmio-y := drivers/base/regmap/regmap-mmio.o
@@ -98,6 +99,7 @@ n5010-phy-y := drivers/net/ethernet/silicom/n5010-phy.o
 n5010-hssi-y := drivers/net/ethernet/silicom/n5010-hssi.o
 intel-m10-bmc-pmci-y := drivers/mfd/intel-m10-bmc-pmci.o
 uio_dfl-y := drivers/uio/uio_dfl.o
+8250_dfl-y := drivers/tty/serial/8250/8250_dfl.o
 
 # intermediates used when reversing modules list
 count := $(words $(obj-m))
