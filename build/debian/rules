@@ -8,21 +8,21 @@ build:
 install: build
 	dh_testdir
 	dh_installdirs
-	install -d $(CURDIR)/debian/tmp/usr/src/linux-dfl-backport-$(PKGVER)/
-	cp -a ../drivers $(CURDIR)/debian/tmp/usr/src/linux-dfl-backport-$(PKGVER)/
-	cp -a ../include $(CURDIR)/debian/tmp/usr/src/linux-dfl-backport-$(PKGVER)/
-	cp -a ../Makefile $(CURDIR)/debian/tmp/usr/src/linux-dfl-backport-$(PKGVER)/
-	cp -a ../LICENSE $(CURDIR)/debian/tmp/usr/src/linux-dfl-backport-$(PKGVER)/
-	cp -a dkms/dkms-postinst.sh $(CURDIR)/debian/tmp/usr/src/linux-dfl-backport-$(PKGVER)/
-	cp -a dkms/dkms-postrem.sh $(CURDIR)/debian/tmp/usr/src/linux-dfl-backport-$(PKGVER)/
-	cp -a dkms/dkms-preinst.sh $(CURDIR)/debian/tmp/usr/src/linux-dfl-backport-$(PKGVER)/
-	cp -a dkms/generate-dkms-conf.sh $(CURDIR)/debian/tmp/usr/src/linux-dfl-backport-$(PKGVER)/
-	sed -e 's/PKGVER/$(PKGVER)/' dkms/dkms.conf.in > $(CURDIR)/debian/tmp/usr/src/linux-dfl-backport-$(PKGVER)/dkms.conf
-	sed -e 's/PKGVER/$(PKGVER)/' debian/linux-dfl-backport-driver-dkms.postinst.in >$(CURDIR)/debian/linux-dfl-backport-driver-dkms.postinst
-	sed -e 's/PKGVER/$(PKGVER)/' debian/linux-dfl-backport-driver-dkms.prerm.in >$(CURDIR)/debian/linux-dfl-backport-driver-dkms.prerm
+	install -d $(CURDIR)/debian/tmp/usr/src/intel-fpga-dfl-$(PKGVER)/
+	cp -a ../drivers $(CURDIR)/debian/tmp/usr/src/intel-fpga-dfl-$(PKGVER)/
+	cp -a ../include $(CURDIR)/debian/tmp/usr/src/intel-fpga-dfl-$(PKGVER)/
+	cp -a ../Makefile $(CURDIR)/debian/tmp/usr/src/intel-fpga-dfl-$(PKGVER)/
+	cp -a ../LICENSE $(CURDIR)/debian/tmp/usr/src/intel-fpga-dfl-$(PKGVER)/
+	cp -a dkms/dkms-postinst.sh $(CURDIR)/debian/tmp/usr/src/intel-fpga-dfl-$(PKGVER)/
+	cp -a dkms/dkms-postrem.sh $(CURDIR)/debian/tmp/usr/src/intel-fpga-dfl-$(PKGVER)/
+	cp -a dkms/dkms-preinst.sh $(CURDIR)/debian/tmp/usr/src/intel-fpga-dfl-$(PKGVER)/
+	cp -a dkms/generate-dkms-conf.sh $(CURDIR)/debian/tmp/usr/src/intel-fpga-dfl-$(PKGVER)/
+	sed -e 's/PKGVER/$(PKGVER)/' dkms/dkms.conf.in > $(CURDIR)/debian/tmp/usr/src/intel-fpga-dfl-$(PKGVER)/dkms.conf
+	sed -e 's/PKGVER/$(PKGVER)/' debian/intel-fpga-dfl-dkms.postinst.in >$(CURDIR)/debian/intel-fpga-dfl-dkms.postinst
+	sed -e 's/PKGVER/$(PKGVER)/' debian/intel-fpga-dfl-dkms.prerm.in >$(CURDIR)/debian/intel-fpga-dfl-dkms.prerm
 
 binary-indep: install
-	dh_install -plinux-dfl-backport-driver-dkms
+	dh_install -pintel-fpga-dfl-dkms
 	dh_installchangelogs -i
 	dh_installdeb -i
 	dh_gencontrol -i

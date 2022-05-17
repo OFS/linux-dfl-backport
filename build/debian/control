@@ -1,4 +1,4 @@
-Source: linux-dfl-backport-driver
+Source: intel-fpga-dfl
 Section: kernel
 Priority: optional
 Maintainer: The OPAE Development Team <opae@lists.01.org>
@@ -6,7 +6,7 @@ Standards-Version: 3.9.3
 Homepage: http://www.intel.com
 Build-Depends: debhelper (>= 11)
 
-Package: linux-dfl-backport-driver-dkms
+Package: intel-fpga-dfl-dkms
 Architecture: all
 Depends: dkms, linux-headers, libelf-dev
 Recommends: linux-image

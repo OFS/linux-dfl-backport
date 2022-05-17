@@ -10,7 +10,7 @@ import time
 GIT_REFS_PATTERN = r'(?:\s*tag:)(?:\s+(?P<tag>.*))'
 GIT_REFS_RE = re.compile(GIT_REFS_PATTERN)
 
-CHANGELOG_HDR_FMT = 'linux-dfl-backport-driver ({}) stable; urgency=medium\n\n'
+CHANGELOG_HDR_FMT = 'intel-fpga-dfl ({}) stable; urgency=medium\n\n'
 CHANGELOG_FTR_FMT = ' -- The OPAE Dev Team <opae@lists.01.org>  {}\n'
 
 

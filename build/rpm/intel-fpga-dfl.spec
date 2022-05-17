@@ -1,4 +1,4 @@
-Name:               linux-dfl-backport
+Name:               intel-fpga-dfl-dkms
 Version:            %{getenv:BACKPORT_VERSION}
 Release:            1
 Summary:            Backported fpga drivers from linux-dfl
@@ -8,13 +8,13 @@ URL:                https://github.com/OPAE/linux-dfl-backport/
 BuildArch:          noarch
 Requires:           dkms, (kernel-devel if kernel), (kernel-rt-devel if kernel-rt)
 
-%define _dstdir %{_usrsrc}/linux-dfl-backport-%{version}-%{release}
+%define _dstdir %{_usrsrc}/intel-fpga-dfl-%{version}-%{release}
 %define _pkgdir %{buildroot}%{_dstdir}
-%define _dracut %{_prefix}/lib/dracut/dracut.conf.d/90-linux-dfl-backport.conf
+%define _dracut %{_prefix}/lib/dracut/dracut.conf.d/90-intel-fpga-dfl.conf
 
 %description
 A backport of DFL FPGA drivers from the current LTS branch of
-https://github.com/OPAE/linux-dfl-backport/.
+https://github.com/OPAE/linux-dfl/.
 
 %install
 install -d %{_pkgdir}

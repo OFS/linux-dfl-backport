@@ -1,0 +1,8 @@
+#!/bin/sh
+# Copyright(c) 2022, Intel Corporation
+
+echo
+echo "Uninstall of intel-fpga-dfl module (version PKGVER) beginning:"
+if [ -n "`dkms status -m intel-fpga-dfl -v PKGVER`" ]; then
+	dkms remove -m intel-fpga-dfl -v PKGVER --all
+fi

@@ -161,7 +161,7 @@ dkms:
 	@echo $(modules)
 
 # build rpm packages
-rpm: build/rpm/linux-dfl-backport.spec clean
+rpm: build/rpm/intel-fpga-dfl.spec clean
 	@rpmbuild $(RPMBUILDOPTS) $<
 
 deb: clean

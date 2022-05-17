@@ -1,4 +1,4 @@
-PACKAGE_NAME="linux-dfl-backport"
+PACKAGE_NAME="intel-fpga-dfl"
 PACKAGE_VERSION="PKGVER"
 MAKE[0]="make KERNELDIR=$kernel_source_dir"
 CLEAN="make KERNELDIR=$kernel_source_dir clean"
@@ -17,8 +17,8 @@ local dkms_generated_conf="$dkms_dir/dkms-$kernelver-$arch.conf"
 local dkms_src="$dkms_dir/source"
 
 if [ -L $dkms_src  ]; then
-  # at this stage, the link from /var/lib/dkms/linux-dfl-backport/<version>/source/
-  # to /usr/src/linux-dfl-backport-<version> has been created, so the dynamic
+  # at this stage, the link from /var/lib/dkms/intel-fpga-dfl/<version>/source/
+  # to /usr/src/intel-fpga-dfl-<version> has been created, so the dynamic
   # configuration can be generated and/or sourced
 
   if ! [ -f $dkms_generated_conf ]; then
