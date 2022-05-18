@@ -19,11 +19,17 @@ RPMBUILDOPTS = -bb --build-in-place \
 
 ifeq ($(BACKPORT_VERSION),)
 ifneq ($(wildcard .git),)
-BACKPORT_VERSION := $(shell git describe --always --tags --dirty | sed -E 's/^sil//;s/^v//;s/([^-]*-g)/r\1/;s/-/./g;s/\.rc/rc/')
+date := $(shell date +%Y.%m.%d)
+version_string := $(shell git describe --first-parent --long --match 'intel*' \
+		      --always --tags --dirty | \
+		      sed -E "s/^intel-//;s/^v//;s/[^-]+-g/${date}-g/")
+BACKPORT_VERSION := $(shell echo ${version_string} | sed -E "s/-.*//")
+BACKPORT_RELEASE := $(shell echo ${version_string} | sed -E "s/^[^-]+-//;s/-/./g")
 endif
 endif
 
 export BACKPORT_VERSION
+export BACKPORT_RELEASE
 
 ifndef CONFIG_REGMAP_MMIO
 obj-m += regmap-mmio.o
@@ -165,8 +171,9 @@ rpm: build/rpm/intel-fpga-dfl.spec clean
 	@rpmbuild $(RPMBUILDOPTS) $<
 
 deb: clean
-	python build/debian/deb-changelog.py $(BACKPORT_VERSION) > build/debian/changelog
-	cd build && debuild -uc -us
+	python build/debian/deb-changelog.py \
+		$(BACKPORT_VERSION)-$(BACKPORT_RELEASE) > build/debian/changelog
+	cd build && yes | debuild -uc -us
 
 help:
 	@echo "Build Usage:"

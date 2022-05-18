@@ -1,6 +1,6 @@
 Name:               intel-fpga-dfl-dkms
 Version:            %{getenv:BACKPORT_VERSION}
-Release:            1
+Release:            %{getenv:BACKPORT_RELEASE}
 Summary:            Backported fpga drivers from linux-dfl
 License:            GPLv2
 Group:              System/Kernel and hardware
