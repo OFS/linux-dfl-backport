@@ -26,11 +26,11 @@ install -d $(dirname %{buildroot}%{_dracut})
 echo 'omit_drivers+="%_modules"' > %{buildroot}%{_dracut}
 
 %post
-dkms add intel-fpga-dfl/%{version}-%{release} --rpm_safe_upgrade --no-initrd
-dkms install intel-fpga-dfl/%{version}-%{release} --rpm_safe_upgrade --no-initrd
+dkms add intel-fpga-dfl/%{version}-%{release} --rpm_safe_upgrade
+dkms install intel-fpga-dfl/%{version}-%{release} --rpm_safe_upgrade
 
 %preun
-dkms remove intel-fpga-dfl/%{version}-%{release} --rpm_safe_upgrade --no-initrd --all
+dkms remove intel-fpga-dfl/%{version}-%{release} --rpm_safe_upgrade --all
 
 %postun
 rmdir %{_dstdir}
