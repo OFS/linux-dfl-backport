@@ -28,6 +28,10 @@ BACKPORT_RELEASE := $(shell echo ${version_string} | sed -E "s/^[^-]+-//;s/-/./g
 endif
 endif
 
+ifeq ($(BACKPORT_RELEASE),)
+BACKPORT_RELEASE := 1
+endif
+
 export BACKPORT_VERSION
 export BACKPORT_RELEASE
 
