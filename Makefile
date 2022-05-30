@@ -21,6 +21,9 @@ BACKPORT_VERSION := $(shell git describe --always --tags --dirty | sed -E 's/^si
 endif
 endif
 
+DPKG_BUILDDIR = /tmp/dpkg
+DST_DIR       = /usr/src/linux-dfl-backport-$(BACKPORT_VERSION)-1
+
 export BACKPORT_VERSION
 
 ifndef CONFIG_REGMAP_MMIO
@@ -135,7 +138,8 @@ install:
 # remove build artifacts
 clean:
 	@$(MAKE) -C $(KERNELDIR) M=$(CURDIR) clean
-	@-rm -f *.rpm
+	@-rm -f *.rpm *.deb
+	@-rm -rf $(DPKG_BUILDDIR)
 
 $(rules_rmmod): rmmod_%:
 	@if lsmod | grep -qE '\<$*\>'; then rmmod $*; fi
@@ -158,6 +162,17 @@ dkms:
 rpm: build/rpm/linux-dfl-backport.spec clean
 	@rpmbuild $(RPMBUILDOPTS) $<
 
+deb:
+	mkdir -p $(DPKG_BUILDDIR)/usr/lib/dracut/dracut.conf.d
+	cp -av build/dpkg/* $(DPKG_BUILDDIR)/
+	sed -i "s/VERSION/$(BACKPORT_VERSION)/" $(DPKG_BUILDDIR)/DEBIAN/*
+	mkdir -p $(DPKG_BUILDDIR)$(DST_DIR)
+	cp -a Makefile drivers include build/dkms/generate-dkms-conf.sh $(DPKG_BUILDDIR)$(DST_DIR)
+	sed -E 's/PACKAGE_VERSION=".+"/PACKAGE_VERSION="$(BACKPORT_VERSION)-1"/' build/dkms/dkms.conf > $(DPKG_BUILDDIR)$(DST_DIR)/dkms.conf
+	echo 'omit_drivers+="$(reverse)"' > $(DPKG_BUILDDIR)/usr/lib/dracut/dracut.conf.d/90-linux-dfl-backport.conf
+	rm $(DPKG_BUILDDIR)$(DST_DIR)/include/linux/sysfs.h
+	dpkg-deb -b /tmp/dpkg linux-dfl-backport-$(BACKPORT_VERSION)-1.noarch.deb
+
 help:
 	@echo "Build Usage:"
 	@echo " make all	Build kernel modules"
@@ -166,6 +181,7 @@ help:
 	@echo ""
 	@echo "Package Usage:"
 	@echo " make rpm	Build rpm package from source"
+	@echo " make deb	Build deb package from source"
 	@echo ""
 	@echo "Test Usage:"
 	@echo " make rmmod	Remove modules from running kernel"
@@ -179,4 +195,4 @@ help:
 	@echo "Test Arguments:"
 	@echo " DEBUG=<0|1>	Toggle dynamic debugging when inserting modules (0)"
 
-.PHONY: all install clean rmmod insmod reload rpm help dkms
+.PHONY: all install clean rmmod insmod reload rpm help dkms deb

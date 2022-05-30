@@ -1,0 +1,8 @@
+Package: linux-dfl-backport
+Version: VERSION
+Section: System/Kernel and hardware
+Priority: optional
+Architecture: all
+Depends: dkms
+Maintainer: rc@silicom.dk
+Description: Backported fpga drivers from linux-dfl
