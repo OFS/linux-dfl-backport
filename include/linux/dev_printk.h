@@ -5,7 +5,7 @@
 #include <linux/version.h>
 
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 6, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 6, 0) && RHEL_RELEASE_CODE < 0x806
 #include <linux/device.h>
 #else
 #include_next <linux/dev_printk.h>
