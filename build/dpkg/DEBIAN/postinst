@@ -1,0 +1,6 @@
+#!/bin/sh
+
+dkms add linux-dfl-backport/VERSION-1 --rpm_safe_upgrade --no-initrd
+dkms install linux-dfl-backport/VERSION-1 --rpm_safe_upgrade --no-initrd
+depmod
+modprobe -a dfl_pci

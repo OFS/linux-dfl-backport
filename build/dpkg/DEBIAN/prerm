@@ -1,0 +1,4 @@
+#!/bin/sh
+
+make -C /usr/src/linux-dfl-backport-VERSION-1 rmmod
+dkms remove linux-dfl-backport/VERSION-1 --rpm_safe_upgrade --no-initrd --all
