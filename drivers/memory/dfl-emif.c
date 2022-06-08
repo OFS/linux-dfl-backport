@@ -15,6 +15,7 @@
 #include <linux/module.h>
 #include <linux/spinlock.h>
 #include <linux/types.h>
+#include <linux/version.h>
 
 #define FME_FEATURE_ID_EMIF		0x9
 
@@ -222,6 +223,9 @@ static int dfl_emif_probe(struct dfl_device *ddev)
 {
 	struct device *dev = &ddev->dev;
 	struct dfl_emif *de;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8, 3)
+	int ret;
+#endif
 
 	de = devm_kzalloc(dev, sizeof(*de), GFP_KERNEL);
 	if (!de)
@@ -235,6 +239,12 @@ static int dfl_emif_probe(struct dfl_device *ddev)
 	spin_lock_init(&de->lock);
 	dev_set_drvdata(dev, de);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8, 3)
+	ret = devm_device_add_groups(dev, dfl_emif_groups);
+	if (ret)
+		return ret;
+#endif
+
 	return 0;
 }
 
@@ -247,7 +257,9 @@ MODULE_DEVICE_TABLE(dfl, dfl_emif_ids);
 static struct dfl_driver dfl_emif_driver = {
 	.drv	= {
 		.name       = "dfl-emif",
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8, 3)
 		.dev_groups = dfl_emif_groups,
+#endif
 	},
 	.id_table = dfl_emif_ids,
 	.probe   = dfl_emif_probe,
