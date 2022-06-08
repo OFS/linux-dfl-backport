@@ -11,6 +11,7 @@
 #include <linux/module.h>
 #include <linux/phy/intel-s10-phy.h>
 #include <linux/platform_device.h>
+#include <linux/version.h>
 
 /* HSSI QSFP Control & Status Registers */
 #define HSSI_QSFP_RCFG_CMD(phy)		((phy)->phy_offset + 0x0)
@@ -507,6 +508,9 @@ static int intel_s10_phy_probe(struct platform_device *pdev)
 	struct intel_s10_platform_data *pdata;
 	struct device *dev = &pdev->dev;
 	struct hssi_phy *phy;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8, 3)
+	int ret;
+#endif
 
 	pdata = dev_get_platdata(dev);
 	if (!pdata)
@@ -522,6 +526,14 @@ static int intel_s10_phy_probe(struct platform_device *pdev)
 	mutex_init(&phy->lock);
 	dev_set_drvdata(dev, phy);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8, 3)
+	ret = devm_device_add_groups(dev, qsfp_attr_groups);
+	if (ret) {
+		mutex_destroy(&phy->lock);
+		return ret;
+	}
+#endif
+
 	return 0;
 }
 
@@ -536,7 +548,9 @@ static int intel_s10_phy_remove(struct platform_device *pdev)
 static struct platform_driver intel_s10_phy_driver = {
 	.driver = {
 		.name = INTEL_S10_PHY_DRV_NAME,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8, 3)
 		.dev_groups = qsfp_attr_groups,
+#endif
 	},
 	.probe = intel_s10_phy_probe,
 	.remove = intel_s10_phy_remove,
