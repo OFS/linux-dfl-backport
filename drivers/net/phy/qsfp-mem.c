@@ -15,6 +15,7 @@
 #include <linux/netdevice.h>
 #include <linux/regmap.h>
 #include <linux/uaccess.h>
+#include <linux/version.h>
 
 #define CONF_OFF	0x20
 #define CONF_RST_MOD	BIT(0)
@@ -184,6 +185,9 @@ static int qsfp_probe(struct dfl_device *dfl_dev)
 {
 	struct device *dev = &dfl_dev->dev;
 	struct qsfp *qsfp;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8, 3)
+	int ret;
+#endif
 
 	qsfp = devm_kzalloc(dev, sizeof(*qsfp), GFP_KERNEL);
 	if (!qsfp)
@@ -204,6 +208,17 @@ static int qsfp_probe(struct dfl_device *dfl_dev)
 	qsfp->regmap = devm_regmap_init_mmio(dev, qsfp->base, &mmio_cfg);
 	if (IS_ERR(qsfp->regmap))
 		dev_err(dev, "Failed to create qsfp regmap\n");
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8, 3)
+	if (!IS_ERR(qsfp->regmap)) {
+		ret = devm_device_add_groups(dev, qsfp_mem_groups);
+		if (ret) {
+			writeq(CONF_MOD_SEL, qsfp->base + CONF_OFF);
+			cancel_delayed_work_sync(&qsfp->dwork);
+			return ret;
+		}
+	}
+#endif
 
 	return PTR_ERR_OR_ZERO(qsfp->regmap);
 }
@@ -228,7 +243,9 @@ static const struct dfl_device_id qsfp_ids[] = {
 static struct dfl_driver qsfp_driver = {
 	.drv = {
 		.name = "qsfp-mem",
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8, 3)
 		.dev_groups = qsfp_mem_groups,
+#endif
 	},
 	.id_table = qsfp_ids,
 	.probe = qsfp_probe,
