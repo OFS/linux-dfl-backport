@@ -13,6 +13,7 @@
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
+#include <linux/version.h>
 
 struct m10bmc_sec;
 
@@ -1381,6 +1382,9 @@ static int m10bmc_sec_probe(struct platform_device *pdev)
 	struct fpga_image_load_ops *ops;
 	struct fpga_image_load *imgld;
 	struct m10bmc_sec *sec;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8, 3)
+	int ret;
+#endif
 
 	sec = devm_kzalloc(&pdev->dev, sizeof(*sec), GFP_KERNEL);
 	if (!sec)
@@ -1418,6 +1422,15 @@ static int m10bmc_sec_probe(struct platform_device *pdev)
 	}
 
 	sec->imgld = imgld;
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8, 3)
+	ret = devm_device_add_groups(&pdev->dev, m10bmc_sec_attr_groups);
+	if (ret) {
+		fpga_image_load_unregister(sec->imgld);
+		return ret;
+	}
+#endif
+
 	return 0;
 }
 
@@ -1454,7 +1467,9 @@ static struct platform_driver intel_m10bmc_sec_driver = {
 	.remove = m10bmc_sec_remove,
 	.driver = {
 		.name = "intel-m10bmc-sec-update",
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8, 3)
 		.dev_groups = m10bmc_sec_attr_groups,
+#endif
 	},
 	.id_table = intel_m10bmc_sec_ids,
 };
