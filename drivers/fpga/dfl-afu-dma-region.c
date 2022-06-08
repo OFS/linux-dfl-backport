@@ -12,13 +12,15 @@
 #include <linux/fpga-dfl.h>
 #include <linux/sched/signal.h>
 #include <linux/uaccess.h>
-#include <linux/mm.h>
 #include <linux/version.h>
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 3, 0) || RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8, 6)
+#include <linux/mm.h>
+#endif
 
 #include "dfl-afu.h"
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 6, 0) && RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8,4)
-
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 6, 0) && RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8, 4)
 #define pin_user_pages_fast get_user_pages_fast
 #define unpin_user_pages put_all_pages
 
@@ -30,7 +32,54 @@ static void put_all_pages(struct page **pages, int npages)
 		if (pages[i])
 			put_page(pages[i]);
 }
+#endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 3, 0) && RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8, 6)
+/**
+ * afu_dma_adjust_locked_vm - adjust locked memory
+ * @dev: port device
+ * @npages: number of pages
+ * @incr: increase or decrease locked memory
+ *
+ * Increase or decrease the locked memory size with npages input.
+ *
+ * Return 0 on success.
+ * Return -ENOMEM if locked memory size is over the limit and no CAP_IPC_LOCK.
+ */
+static int afu_dma_adjust_locked_vm(struct device *dev, long npages, bool incr)
+{
+	unsigned long locked, lock_limit;
+	int ret = 0;
+
+	/* the task is exiting. */
+	if (!current->mm)
+		return 0;
+
+	down_write(&current->mm->mmap_sem);
+
+	if (incr) {
+		locked = current->mm->locked_vm + npages;
+		lock_limit = rlimit(RLIMIT_MEMLOCK) >> PAGE_SHIFT;
+
+		if (locked > lock_limit && !capable(CAP_IPC_LOCK))
+			ret = -ENOMEM;
+		else
+			current->mm->locked_vm += npages;
+	} else {
+		if (WARN_ON_ONCE(npages > current->mm->locked_vm))
+			npages = current->mm->locked_vm;
+		current->mm->locked_vm -= npages;
+	}
+
+	dev_dbg(dev, "[%d] RLIMIT_MEMLOCK %c%ld %ld/%ld%s\n", current->pid,
+		incr ? '+' : '-', npages << PAGE_SHIFT,
+		current->mm->locked_vm << PAGE_SHIFT, rlimit(RLIMIT_MEMLOCK),
+		ret ? "- exceeded" : "");
+
+	up_write(&current->mm->mmap_sem);
+
+	return ret;
+}
 #endif
 
 void afu_dma_region_init(struct dfl_feature_dev_data *fdata)
@@ -56,7 +105,12 @@ static int afu_dma_pin_pages(struct dfl_feature_dev_data *fdata,
 	unsigned int flags = FOLL_LONGTERM;
 	int ret, pinned;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 3, 0) && RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8, 6)
+	ret = afu_dma_adjust_locked_vm(dev, npages, true);
+#else
 	ret = account_locked_vm(current->mm, npages, true);
+#endif
+
 	if (ret)
 		return ret;
 
@@ -88,7 +142,11 @@ unpin_pages:
 free_pages:
 	kfree(region->pages);
 unlock_vm:
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 3, 0) && RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8, 6)
+	afu_dma_adjust_locked_vm(dev, npages, false);
+#else
 	account_locked_vm(current->mm, npages, false);
+#endif
 	return ret;
 }
 
@@ -108,7 +166,12 @@ static void afu_dma_unpin_pages(struct dfl_feature_dev_data *fdata,
 
 	unpin_user_pages(region->pages, npages);
 	kfree(region->pages);
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 3, 0) && RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8, 6)
+	afu_dma_adjust_locked_vm(dev, npages, false);
+#else
 	account_locked_vm(current->mm, npages, false);
+#endif
 
 	dev_dbg(dev, "%ld pages unpinned\n", npages);
 }
