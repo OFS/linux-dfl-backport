@@ -40,7 +40,7 @@ static int indirect_bus_clr_cmd(struct indirect_ctx *ctx)
 				 (!cmd), INDIRECT_INT_US, INDIRECT_TIMEOUT_US);
 
 	if (ret)
-		dev_err(ctx->dev, "%s timed out on clearing cmd 0x%xn", __func__, cmd);
+		dev_err(ctx->dev, "%s timed out on clearing cmd 0x%x\n", __func__, cmd);
 
 	return ret;
 }
@@ -108,7 +108,6 @@ static int indirect_bus_reg_write(void *context, unsigned int reg,
 }
 
 static const struct regmap_bus indirect_bus = {
-	.fast_io = true,
 	.reg_write = indirect_bus_reg_write,
 	.reg_read =  indirect_bus_reg_read,
 };
