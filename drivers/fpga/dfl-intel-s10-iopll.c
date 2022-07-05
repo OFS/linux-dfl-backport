@@ -10,6 +10,7 @@
 #include <linux/iopoll.h>
 #include <uapi/linux/intel-dfl-iopll.h>
 #include <linux/module.h>
+#include <linux/version.h>
 
 #include "dfl.h"
 
@@ -522,6 +523,9 @@ static int dfl_intel_s10_iopll_probe(struct dfl_device *dfl_dev)
 	struct device *dev = &dfl_dev->dev;
 	struct dfl_iopll *iopll;
 	void __iomem *csr_base;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8, 3)
+	int ret;
+#endif
 
 	csr_base = devm_ioremap_resource(dev, &dfl_dev->mmio_res);
 	if (IS_ERR(csr_base)) {
@@ -537,6 +541,14 @@ static int dfl_intel_s10_iopll_probe(struct dfl_device *dfl_dev)
 	iopll->dev = dev;
 	mutex_init(&iopll->iopll_mutex);
 	dev_set_drvdata(dev, iopll);
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8, 3)
+	ret = devm_device_add_groups(dev, iopll_attr_groups);
+	if (ret) {
+		mutex_destroy(&iopll->iopll_mutex);
+		return ret;
+	}
+#endif
 
 	return 0;
 }
@@ -558,7 +570,9 @@ static const struct dfl_device_id dfl_intel_s10_iopll_ids[] = {
 static struct dfl_driver dfl_intel_s10_iopll_driver = {
 	.drv = {
 		.name = "intel-dfl-iopll",
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8, 3)
 		.dev_groups = iopll_attr_groups,
+#endif
 	},
 	.id_table = dfl_intel_s10_iopll_ids,
 	.probe = dfl_intel_s10_iopll_probe,

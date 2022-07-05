@@ -13,6 +13,7 @@
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
+#include <linux/version.h>
 
 struct m10bmc_sec;
 
@@ -40,6 +41,7 @@ static const char * const fpga_image_names[] = {
 
 struct fpga_power_on {
 	u32 avail_image_mask;
+	int (*get_sequence)(struct m10bmc_sec *sec, char *buf);
 	int (*set_sequence)(struct m10bmc_sec *sec, enum fpga_image images[]);
 };
 
@@ -495,6 +497,44 @@ DEVICE_ATTR_SEC_REH_RO(bmc);
 DEVICE_ATTR_SEC_REH_RO(sr);
 DEVICE_ATTR_SEC_REH_RO(pr);
 
+#define SDM_ROOT_HASH_REG_NUM 12
+
+static ssize_t
+show_sdm_root_entry_hash(struct device *dev, u32 start, char *buf)
+{
+	struct m10bmc_sec *sec = dev_get_drvdata(dev);
+	int i, cnt, ret;
+	u32 key;
+
+	cnt = sprintf(buf, "0x");
+	for (i = 0; i < SDM_ROOT_HASH_REG_NUM; i++) {
+		ret = m10bmc_sys_read(sec->m10bmc,
+				      m10bmc_base(sec->m10bmc) +
+				      start + i * 4, &key);
+		if (ret)
+			return ret;
+
+		cnt += sprintf(buf + cnt, "%08x", key);
+	}
+	cnt += sprintf(buf + cnt, "\n");
+
+	return cnt;
+}
+
+#define DEVICE_ATTR_SDM_SEC_REH_RO(_name) \
+static ssize_t _name##_sdm_root_entry_hash_show(struct device *dev, \
+					    struct device_attribute *attr, \
+					    char *buf) \
+{							\
+	struct m10bmc_sec *sec = dev_get_drvdata(dev);   \
+	struct intel_m10bmc *m10bmc = sec->m10bmc;  \
+	return show_sdm_root_entry_hash(dev, _name##_sdm_reh_reg(m10bmc),\
+			buf); } \
+static DEVICE_ATTR_RO(_name##_sdm_root_entry_hash)
+
+DEVICE_ATTR_SDM_SEC_REH_RO(pr);
+DEVICE_ATTR_SDM_SEC_REH_RO(sr);
+
 #define CSK_BIT_LEN		128U
 #define CSK_32ARRAY_SIZE	DIV_ROUND_UP(CSK_BIT_LEN, 32)
 
@@ -538,6 +578,34 @@ static DEVICE_ATTR_RO(_name##_canceled_csks)
 DEVICE_ATTR_SEC_CSK_RO(bmc);
 DEVICE_ATTR_SEC_CSK_RO(sr);
 DEVICE_ATTR_SEC_CSK_RO(pr);
+
+static ssize_t
+show_sdm_canceled_csk(struct device *dev, u32 addr, char *buf)
+{
+	struct m10bmc_sec *sec = dev_get_drvdata(dev);
+	int ret;
+	u32 val;
+
+	ret = m10bmc_sys_read(sec->m10bmc,
+			      m10bmc_base(sec->m10bmc) + addr, &val);
+	if (ret)
+		return ret;
+
+	return sysfs_emit(buf, "%08x\n", val);
+}
+
+#define DEVICE_ATTR_SDM_SEC_CSK_RO(_name) \
+static ssize_t _name##_sdm_canceled_csks_show(struct device *dev, \
+					  struct device_attribute *attr, \
+					  char *buf) \
+{                                                    \
+	struct m10bmc_sec *sec = dev_get_drvdata(dev);   \
+	struct intel_m10bmc *m10bmc = sec->m10bmc;  \
+	return show_sdm_canceled_csk(dev, _name##_sdm_csk_reg(m10bmc),\
+			buf); } \
+static DEVICE_ATTR_RO(_name##_sdm_canceled_csks)
+DEVICE_ATTR_SDM_SEC_CSK_RO(pr);
+DEVICE_ATTR_SDM_SEC_CSK_RO(sr);
 
 #define FLASH_COUNT_SIZE 4096	/* count stored as inverted bit vector */
 
@@ -595,7 +663,11 @@ m10bmc_security_is_visible(struct kobject *kobj, struct attribute *attr, int n)
 	struct m10bmc_sec *sec = dev_get_drvdata(kobj_to_dev(kobj));
 
 	if (sec->type != N6000BMC_SEC &&
-	    attr == &dev_attr_sdm_sr_provision_status.attr)
+	    (attr == &dev_attr_sdm_sr_provision_status.attr ||
+	     attr == &dev_attr_pr_sdm_root_entry_hash.attr ||
+	     attr == &dev_attr_pr_sdm_canceled_csks.attr ||
+	     attr == &dev_attr_sr_sdm_root_entry_hash.attr ||
+	     attr == &dev_attr_sr_sdm_canceled_csks.attr))
 		return 0;
 
 	return attr->mode;
@@ -610,6 +682,10 @@ static struct attribute *m10bmc_security_attrs[] = {
 	&dev_attr_pr_canceled_csks.attr,
 	&dev_attr_bmc_canceled_csks.attr,
 	&dev_attr_sdm_sr_provision_status.attr,
+	&dev_attr_pr_sdm_root_entry_hash.attr,
+	&dev_attr_pr_sdm_canceled_csks.attr,
+	&dev_attr_sr_sdm_root_entry_hash.attr,
+	&dev_attr_sr_sdm_canceled_csks.attr,
 	NULL,
 };
 
@@ -693,6 +769,34 @@ pmci_set_power_on_image(struct m10bmc_sec *sec, enum fpga_image images[])
 	return 0;
 }
 
+static int pmci_get_power_on_image(struct m10bmc_sec *sec, char *buf)
+{
+	const char *image_names[FPGA_MAX] = { 0 };
+	int ret, i = 0;
+	u32 poc;
+
+	ret = m10bmc_sys_read(sec->m10bmc, M10BMC_PMCI_FPGA_POC_STS_BL, &poc);
+	if (ret)
+		return ret;
+
+	if (poc & PMCI_FACTORY_IMAGE_SEL)
+		image_names[i++] = fpga_image_names[FPGA_FACTORY];
+
+	if (FIELD_GET(PMCI_USER_IMAGE_PAGE, poc) == POC_USER_IMAGE_1) {
+		image_names[i++] = fpga_image_names[FPGA_USER1];
+		image_names[i++] = fpga_image_names[FPGA_USER2];
+	} else {
+		image_names[i++] = fpga_image_names[FPGA_USER2];
+		image_names[i++] = fpga_image_names[FPGA_USER1];
+	}
+
+	if (!(poc & PMCI_FACTORY_IMAGE_SEL))
+		image_names[i] = fpga_image_names[FPGA_FACTORY];
+
+	return sysfs_emit(buf, "%s %s %s\n", image_names[0],
+			  image_names[1], image_names[2]);
+}
+
 static ssize_t
 available_power_on_images_show(struct device *dev,
 			       struct device_attribute *attr, char *buf)
@@ -710,6 +814,15 @@ available_power_on_images_show(struct device *dev,
 	return count;
 }
 static DEVICE_ATTR_RO(available_power_on_images);
+
+static ssize_t
+power_on_image_show(struct device *dev,
+		    struct device_attribute *attr, char *buf)
+{
+	struct m10bmc_sec *sec = dev_get_drvdata(dev);
+
+	return sec->poc->get_sequence(sec, buf);
+}
 
 static ssize_t
 power_on_image_store(struct device *dev,
@@ -734,7 +847,7 @@ free_exit:
 	kfree(tokens);
 	return ret ? : count;
 }
-static DEVICE_ATTR_WO(power_on_image);
+static DEVICE_ATTR_RW(power_on_image);
 
 static ssize_t
 fpga_boot_image_show(struct device *dev,
@@ -764,6 +877,7 @@ static DEVICE_ATTR_RO(fpga_boot_image);
 static const struct fpga_power_on pmci_power_on_image = {
 	.avail_image_mask = BIT(FPGA_FACTORY) | BIT(FPGA_USER1) | BIT(FPGA_USER2),
 	.set_sequence = pmci_set_power_on_image,
+	.get_sequence = pmci_get_power_on_image,
 };
 
 static ssize_t available_images_show(struct device *dev,
@@ -1268,6 +1382,9 @@ static int m10bmc_sec_probe(struct platform_device *pdev)
 	struct fpga_image_load_ops *ops;
 	struct fpga_image_load *imgld;
 	struct m10bmc_sec *sec;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8, 3)
+	int ret;
+#endif
 
 	sec = devm_kzalloc(&pdev->dev, sizeof(*sec), GFP_KERNEL);
 	if (!sec)
@@ -1305,6 +1422,15 @@ static int m10bmc_sec_probe(struct platform_device *pdev)
 	}
 
 	sec->imgld = imgld;
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8, 3)
+	ret = devm_device_add_groups(&pdev->dev, m10bmc_sec_attr_groups);
+	if (ret) {
+		fpga_image_load_unregister(sec->imgld);
+		return ret;
+	}
+#endif
+
 	return 0;
 }
 
@@ -1341,7 +1467,9 @@ static struct platform_driver intel_m10bmc_sec_driver = {
 	.remove = m10bmc_sec_remove,
 	.driver = {
 		.name = "intel-m10bmc-sec-update",
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8, 3)
 		.dev_groups = m10bmc_sec_attr_groups,
+#endif
 	},
 	.id_table = intel_m10bmc_sec_ids,
 };

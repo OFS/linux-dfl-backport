@@ -17,7 +17,8 @@ enum m10bmc_type {
 	M10_N3000,
 	M10_D5005,
 	M10_N5010,
-	M10_N6000
+	M10_N6000,
+	M10_C6100,
 };
 
 #define M10BMC_LEGACY_BUILD_VER		0x300468
@@ -200,6 +201,7 @@ enum m10bmc_type {
 /* Telemetry registers */
 #define M10BMC_PMCI_TELEM_START		0x400
 #define M10BMC_PMCI_TELEM_END		0x78c
+#define M10BMC_PMCI2_TELEM_END		0x7d0
 
 #define M10BMC_PMCI_BUILD_VER   0x0
 #define NIOS2_PMCI_FW_VERSION   0x4
@@ -232,6 +234,10 @@ enum m10bmc_type {
 #define PMCI_MAX10_REBOOT_REQ BIT(0)
 #define PMCI_MAX10_REBOOT_PAGE BIT(1)
 
+#define M10BMC_PMCI_FPGA_CONF_STS 0xa0
+#define PMCI_FPGA_BOOT_PAGE	GENMASK(2, 0)
+#define PMCI_FPGA_CONFIGED	BIT(3)
+
 #define M10BMC_PMCI_FPGA_POC	0xb0
 #define PMCI_FPGA_POC		BIT(0)
 #define PMCI_NIOS_REQ_CLEAR	BIT(1)
@@ -244,13 +250,11 @@ enum m10bmc_type {
 #define POC_USER_IMAGE_2	2
 #define PMCI_FACTORY_IMAGE_SEL	BIT(31)
 
+#define M10BMC_PMCI_FPGA_POC_STS_BL 0xb4
+
 #define M10BMC_PMCI_FPGA_RECONF 0xb8
 #define PMCI_FPGA_RECONF_PAGE  GENMASK(22, 20)
 #define PMCI_FPGA_RP_LOAD      BIT(23)
-
-#define M10BMC_PMCI_FPGA_CONF_STS 0xa0
-#define PMCI_FPGA_BOOT_PAGE  GENMASK(2, 0)
-#define PMCI_FPGA_CONFIGED   BIT(3)
 
 #define M10BMC_PMCI_SDM_CTRL_STS 0x230
 #define PMCI_SDM_IMG_REQ	BIT(0)
@@ -259,6 +263,11 @@ enum m10bmc_type {
 #define M10BMC_PMCI_SDM_PR_STS		0x820
 #define M10BMC_PMCI_CERT_PROG_STS	0x824
 #define M10BMC_PMCI_CERT_SPEC_STS	0x828
+
+#define M10BMC_PMCI_SR_RH0 0x848
+#define M10BMC_PMCI_SR_CSK 0x878
+#define M10BMC_PMCI_PR_RH0 0x87c
+#define M10BMC_PMCI_PR_CSK 0x8ac
 
 #define PMCI_ERROR_LOG_ADDR  0x7fb0000
 #define PMCI_ERROR_LOG_SIZE  0x40000
@@ -298,6 +307,10 @@ enum m10bmc_type {
 #define pr_reh_addr(m10bmc) ((m10bmc)->csr->pr_reh_addr)
 #define pr_magic(m10bmc) ((m10bmc)->csr->pr_magic)
 #define rsu_update_counter(m10bmc) ((m10bmc)->csr->rsu_update_counter)
+#define pr_sdm_reh_reg(m10bmc) ((m10bmc)->csr->pr_sdm_reh_reg)
+#define pr_sdm_csk_reg(m9bmc) ((m10bmc)->csr->pr_sdm_csk_reg)
+#define sr_sdm_reh_reg(m10bmc) ((m10bmc)->csr->sr_sdm_reh_reg)
+#define sr_sdm_csk_reg(m10bmc) ((m10bmc)->csr->sr_sdm_csk_reg)
 
 enum m10bmc_fw_state {
 	M10BMC_FW_STATE_NORMAL,
@@ -325,6 +338,10 @@ struct m10bmc_csr {
 	unsigned int pr_reh_addr;
 	unsigned int pr_magic;
 	unsigned int rsu_update_counter;
+	unsigned int pr_sdm_reh_reg;
+	unsigned int pr_sdm_csk_reg;
+	unsigned int sr_sdm_reh_reg;
+	unsigned int sr_sdm_csk_reg;
 };
 
 /**

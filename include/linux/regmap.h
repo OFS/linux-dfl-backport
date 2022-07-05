@@ -362,8 +362,10 @@ struct regmap_config {
 	bool (*readable_reg)(struct device *dev, unsigned int reg);
 	bool (*volatile_reg)(struct device *dev, unsigned int reg);
 	bool (*precious_reg)(struct device *dev, unsigned int reg);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 20, 0) || RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(9, 0)
 	bool (*writeable_noinc_reg)(struct device *dev, unsigned int reg);
 	bool (*readable_noinc_reg)(struct device *dev, unsigned int reg);
+#endif
 
 	bool disable_locking;
 	regmap_lock lock;
@@ -380,8 +382,10 @@ struct regmap_config {
 	const struct regmap_access_table *rd_table;
 	const struct regmap_access_table *volatile_table;
 	const struct regmap_access_table *precious_table;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0) || RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(9, 0)
 	const struct regmap_access_table *wr_noinc_table;
 	const struct regmap_access_table *rd_noinc_table;
+#endif
 	const struct reg_default *reg_defaults;
 	unsigned int num_reg_defaults;
 	enum regcache_type cache_type;
@@ -404,11 +408,15 @@ struct regmap_config {
 	unsigned int num_ranges;
 
 	bool use_hwlock;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0) || RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(9, 2)
 	bool use_raw_spinlock;
+#endif
 	unsigned int hwlock_id;
 	unsigned int hwlock_mode;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0) || RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(9, 0)
 	bool can_sleep;
+#endif
 };
 
 /**

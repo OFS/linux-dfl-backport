@@ -11,6 +11,7 @@
 #include <linux/mfd/intel-m10-bmc.h>
 #include <linux/module.h>
 #include <linux/regmap.h>
+#include <linux/version.h>
 
 #define M10BMC_PMCI_INDIRECT_BASE 0x400
 
@@ -150,7 +151,6 @@ static struct regmap_config m10bmc_pmci_regmap_config = {
 	.reg_bits = 32,
 	.reg_stride = 4,
 	.val_bits = 32,
-	.fast_io = true,
 	.wr_table = &m10_access_table,
 	.rd_table = &m10_access_table,
 	.max_register = M10BMC_PMCI_SYS_END,
@@ -161,6 +161,7 @@ static int pmci_probe(struct dfl_device *ddev)
 	struct fpga_flash_ops *pmci_flash_ops;
 	struct device *dev = &ddev->dev;
 	struct pmci_device *pmci;
+	int ret;
 
 	pmci = devm_kzalloc(dev, sizeof(*pmci), GFP_KERNEL);
 	if (!pmci)
@@ -176,7 +177,10 @@ static int pmci_probe(struct dfl_device *ddev)
 
 	pmci->m10bmc.dev = dev;
 	pmci->dev = dev;
-	pmci->m10bmc.type = M10_N6000;
+	if (ddev->revision == 2)
+		pmci->m10bmc.type = M10_C6100;
+	else
+		pmci->m10bmc.type = M10_N6000;
 	pmci->m10bmc.flash_ops = pmci_flash_ops;
 
 	pmci->base = devm_ioremap_resource(dev, &ddev->mmio_res);
@@ -190,7 +194,16 @@ static int pmci_probe(struct dfl_device *ddev)
 	if (IS_ERR(pmci->m10bmc.regmap))
 		return PTR_ERR(pmci->m10bmc.regmap);
 
-	return m10bmc_dev_init(&pmci->m10bmc);
+	ret = m10bmc_dev_init(&pmci->m10bmc);
+	if (ret)
+		return ret;
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8, 3)
+	ret = devm_device_add_groups(dev, m10bmc_dev_groups);
+	if (ret)
+		mutex_destroy(&pmci_flash_ops->mux_lock);
+#endif
+	return ret;
 }
 
 static void pmci_remove(struct dfl_device *ddev)
@@ -211,7 +224,9 @@ MODULE_DEVICE_TABLE(dfl, pmci_ids);
 static struct dfl_driver pmci_driver = {
 	.drv	= {
 		.name       = "intel-m10-bmc",
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8, 3)
 		.dev_groups = m10bmc_dev_groups,
+#endif
 	},
 	.id_table = pmci_ids,
 	.probe    = pmci_probe,
