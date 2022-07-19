@@ -28,13 +28,14 @@
  * @type: DFL FIU type of the device. See enum dfl_id_type.
  * @feature_id: feature identifier local to its DFL FIU type.
  * @driver_data: driver specific data.
+ * @guid_string: 36 char string of the form 03020100-0504-0706-0809-0A0B0C0D0E0F
  */
 #define dfl_device_id BACKPORT_dfl_device_id
 struct BACKPORT_dfl_device_id {
 	__u16 type;
 	__u16 feature_id;
-	guid_t guid;
 	kernel_ulong_t driver_data;
+	const char guid_string[UUID_STRING_LEN + 1];
 };
 
 #endif /* BACKPORT_LINUX_MOD_DEVICETABLE_H */
