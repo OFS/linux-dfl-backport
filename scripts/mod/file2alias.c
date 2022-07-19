@@ -1379,32 +1379,33 @@ static int do_mhi_entry(const char *filename, void *symval, char *alias)
 	return 1;
 }
 
-/* Looks like: dfl:tNfNg{guid} */
+/* Looks like: dfl:tNfNg{GUID} */
 static int do_dfl_entry(const char *filename, void *symval, char *alias)
 {
-	int guid_cmp_val;
-	guid_t null_guid = {0};
+	bool with_guid = true;
+	int len;
 	DEF_FIELD(symval, dfl_device_id, type);
 	DEF_FIELD(symval, dfl_device_id, feature_id);
-	DEF_FIELD(symval, dfl_device_id, guid);
+	DEF_FIELD_ADDR(symval, dfl_device_id, guid_string);
 
-	guid_cmp_val = memcmp(&null_guid, &guid, sizeof(guid_t));
+	if (__uuid_is_valid(*guid_string) < 0)
+	       with_guid = false;
 
-	if (feature_id == 0 && guid_cmp_val == 0) {
-		warn("Invalid dfl Device ID for in '%s'\n", filename);
+	if (feature_id == 0 && !with_guid) {
+		warn("Invalid dfl Device ID in '%s'\n", filename);
 		return 0;
 	}
 
 	if (feature_id == 0)
-		strcpy(alias, "dfl:t*f*");
+		len = snprintf(alias, ALIAS_SIZE, "dfl:t*f*");
 	else
-		snprintf(alias, ALIAS_SIZE, "dfl:t%04Xf%04X", type, feature_id);
+		len = snprintf(alias, ALIAS_SIZE, "dfl:t%04Xf%04X", type, feature_id);
 
-	if (guid_cmp_val) {
-		strcat(alias + strlen(alias), "g{");
-		add_guid(alias, guid);
-		strcat(alias + strlen(alias), "}");
+	if(with_guid) {
+		__uuid_uppercase((char *)guid_string);
+		snprintf(alias + len, ALIAS_SIZE - len, "g{%s}", *guid_string);
 	}
+
 	add_wildcard(alias);
 	return 1;
 }
