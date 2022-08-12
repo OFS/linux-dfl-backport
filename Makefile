@@ -50,7 +50,9 @@ endif
 obj-m += fpga-mgr.o
 obj-m += fpga-bridge.o
 obj-m += fpga-region.o
+ifndef CONFIG_FW_UPLOAD
 obj-m += fpga-image-load.o
+endif
 obj-m += dfl.o
 obj-m += dfl-fme.o
 obj-m += dfl-afu.o
