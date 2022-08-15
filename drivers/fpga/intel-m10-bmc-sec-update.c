@@ -7,7 +7,14 @@
  */
 #include <linux/bitfield.h>
 #include <linux/device.h>
+#ifdef CONFIG_FW_UPLOAD
+#include <linux/firmware.h>
+#else
 #include <linux/fpga/fpga-image-load.h>
+#define firmware_upload_register(module, dev, name, ops, sec) \
+	fpga_image_load_register(module, dev, name, ops, sec);
+#define firmware_upload_unregister(fwl) fpga_image_load_unregister(fwl)
+#endif
 #include <linux/mfd/intel-m10-bmc.h>
 #include <linux/mod_devicetable.h>
 #include <linux/module.h>
