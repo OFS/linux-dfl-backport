@@ -1653,7 +1653,7 @@ static int m10bmc_sec_probe(struct platform_device *pdev)
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
 	ret = device_add_groups(sec->dev, m10bmc_sec_attr_groups);
-	if (ret)
+	if (ret) {
 		dev_err(sec->dev, "Secure update driver failed to start\n");
 		firmware_upload_unregister(sec->fwl);
 		kfree(sec->fw_name);
