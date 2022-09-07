@@ -142,8 +142,10 @@ static int dfl_spi_altera_probe(struct dfl_device *dfl_dev)
 
 	base = devm_ioremap_resource(dev, &dfl_dev->mmio_res);
 
-	if (IS_ERR(base))
-		return PTR_ERR(base);
+	if (IS_ERR(base)) {
+		err = PTR_ERR(base);
+		goto exit;
+	}
 
 	config_spi_master(base, master);
 	dev_dbg(dev, "%s cs %u bpm 0x%x mode 0x%x\n", __func__,
@@ -151,8 +153,10 @@ static int dfl_spi_altera_probe(struct dfl_device *dfl_dev)
 		master->mode_bits);
 
 	hw->regmap = devm_regmap_init(dev, NULL, base, &indirect_regbus_cfg);
-	if (IS_ERR(hw->regmap))
-		return PTR_ERR(hw->regmap);
+	if (IS_ERR(hw->regmap)) {
+		err = PTR_ERR(hw->regmap);
+		goto exit;
+	}
 
 	hw->irq = -EINVAL;
 
@@ -178,10 +182,19 @@ static int dfl_spi_altera_probe(struct dfl_device *dfl_dev)
 			__func__, board_info.modalias);
 	}
 
+	dev_set_drvdata(&dfl_dev->dev, master);
+
 	return 0;
 exit:
 	spi_master_put(master);
 	return err;
+}
+
+static void dfl_spi_altera_remove(struct dfl_device *dfl_dev)
+{
+	struct spi_master *master = dev_get_drvdata(&dfl_dev->dev);
+
+	spi_master_put(master);
 }
 
 static const struct dfl_device_id dfl_spi_altera_ids[] = {
@@ -195,6 +208,7 @@ static struct dfl_driver dfl_spi_altera_driver = {
 	},
 	.id_table = dfl_spi_altera_ids,
 	.probe   = dfl_spi_altera_probe,
+	.remove = dfl_spi_altera_remove,
 };
 
 module_dfl_driver(dfl_spi_altera_driver);
