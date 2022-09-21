@@ -274,7 +274,7 @@ static int dfl_bus_probe(struct device *dev)
 	return ddrv->probe(ddev);
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 15, 0) && RHEL_RELEASE_CODE < 0x901
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 15, 0) && RHEL_RELEASE_CODE < 0x902
 static int dfl_bus_remove(struct device *dev)
 #else
 static void dfl_bus_remove(struct device *dev)
@@ -286,7 +286,7 @@ static void dfl_bus_remove(struct device *dev)
 	if (ddrv->remove)
 		ddrv->remove(ddev);
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 15, 0) && RHEL_RELEASE_CODE < 0x901
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 15, 0) && RHEL_RELEASE_CODE < 0x902
 	return 0;
 #endif
 }
