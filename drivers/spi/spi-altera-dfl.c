@@ -190,13 +190,6 @@ exit:
 	return err;
 }
 
-static void dfl_spi_altera_remove(struct dfl_device *dfl_dev)
-{
-	struct spi_master *master = dev_get_drvdata(&dfl_dev->dev);
-
-	spi_master_put(master);
-}
-
 static const struct dfl_device_id dfl_spi_altera_ids[] = {
 	{ FME_ID, FME_FEATURE_ID_MAX10_SPI },
 	{ }
@@ -208,7 +201,6 @@ static struct dfl_driver dfl_spi_altera_driver = {
 	},
 	.id_table = dfl_spi_altera_ids,
 	.probe   = dfl_spi_altera_probe,
-	.remove = dfl_spi_altera_remove,
 };
 
 module_dfl_driver(dfl_spi_altera_driver);
