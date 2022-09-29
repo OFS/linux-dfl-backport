@@ -427,12 +427,12 @@ fpga_image_load_register(struct module *module, struct device *parent,
 	imgld->fw_upload_priv = fw_upload_priv;
 	imgld->dev.parent = parent;
 	imgld->dev.class = fpga_image_load_class;
-	imgld->dev.devt = MKDEV(MAJOR(fpga_image_devt), imgld->dev.id);
 
 	ret = xa_alloc(&fpga_image_load_xa, &imgld->dev.id, imgld,
 		       IMAGE_LOAD_XA_LIMIT, GFP_KERNEL);
 	if (ret)
 		goto free_imgld;
+	imgld->dev.devt = MKDEV(MAJOR(fpga_image_devt), imgld->dev.id);
 
 	ret = dev_set_name(&imgld->dev, "fpga_image_load%d", imgld->dev.id);
 	if (ret) {
