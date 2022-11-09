@@ -253,13 +253,39 @@ static bool dfl_guid_is_match(const char *guid_str, const guid_t *guid_dev)
 	return dfl_guid_is_valid(guid_dev) && guid_parse_and_compare(guid_str, guid_dev);
 }
 
+static int dfl_match_one_guid(struct device_driver *drv, void *data)
+{
+	struct dfl_driver *ddrv = to_dfl_drv(drv);
+	const struct dfl_device_id *id_entry;
+	struct dfl_device *ddev = data;
+
+	id_entry = ddrv->id_table;
+	if (!id_entry)
+		return 0;
+
+	while (*id_entry->guid_string) {
+		if (dfl_guid_is_match(id_entry->guid_string, &ddev->guid))
+			return 1;
+		id_entry++;
+	}
+	return 0;
+}
+
+static struct bus_type dfl_bus_type;
+
+static bool can_match_guid(struct dfl_device *ddev)
+{
+	return bus_for_each_drv(&dfl_bus_type, NULL, ddev, dfl_match_one_guid) > 0;
+}
+
 static const struct dfl_device_id *
 dfl_match_one_device(const struct dfl_device_id *id, struct dfl_device *ddev)
 {
 	if (dfl_guid_is_match(id->guid_string, &ddev->guid))
 		return id;
 
-	if (dfl_feature_id_is_match(id, ddev))
+	if (dfl_feature_id_is_match(id, ddev) &&
+	    !(dfl_guid_is_valid(&ddev->guid) && can_match_guid(ddev)))
 		return id;
 
 	return NULL;
