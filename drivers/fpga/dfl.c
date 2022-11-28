@@ -243,11 +243,23 @@ EXPORT_SYMBOL_GPL(dfl_fpga_check_port_id);
 
 static DEFINE_IDA(dfl_device_ida);
 
+static bool dfl_feature_id_is_match(const struct dfl_device_id *id, struct dfl_device *ddev)
+{
+	return id->type == ddev->type && id->feature_id == ddev->feature_id;
+}
+
+static bool dfl_guid_is_match(const char *guid_str, const guid_t *guid_dev)
+{
+	return dfl_guid_is_valid(guid_dev) && guid_parse_and_compare(guid_str, guid_dev);
+}
+
 static const struct dfl_device_id *
 dfl_match_one_device(const struct dfl_device_id *id, struct dfl_device *ddev)
 {
-	if ((dfl_guid_is_valid(&ddev->guid) && guid_equal(&id->guid, &ddev->guid)) ||
-	    (id->type == ddev->type && id->feature_id == ddev->feature_id))
+	if (dfl_guid_is_match(id->guid_string, &ddev->guid))
+		return id;
+
+	if (dfl_feature_id_is_match(id, ddev))
 		return id;
 
 	return NULL;
@@ -261,7 +273,7 @@ static int dfl_bus_match(struct device *dev, struct device_driver *drv)
 
 	id_entry = ddrv->id_table;
 	if (id_entry) {
-		while (id_entry->feature_id || dfl_guid_is_valid(&id_entry->guid)) {
+		while (id_entry->feature_id || *id_entry->guid_string) {
 			if (dfl_match_one_device(id_entry, ddev)) {
 				ddev->id_entry = id_entry;
 				return 1;
@@ -311,12 +323,14 @@ static int dfl_bus_uevent(const struct device *dev, struct kobj_uevent_env *env)
 #else
 	const struct dfl_device *ddev = to_dfl_dev(dev);
 #endif
-	char alias[DFL_ALIAS_BUF_LEN];
+	char alias[sizeof("dfl:tXXXXfXXXXg{}") + UUID_STRING_LEN];
 
-	scnprintf(alias, DFL_ALIAS_BUF_LEN, "dfl:t%04Xf%04X", ddev->type, ddev->feature_id);
-
-	if (!guid_is_null(&ddev->guid))
-		scnprintf(alias + strlen(alias), DFL_ALIAS_BUF_LEN, "g{%pUL}", &ddev->guid);
+	if (guid_is_null(&ddev->guid))
+		snprintf(alias, sizeof("dfl:tXXXXfXXXX"), "dfl:t%04Xf%04X",
+			 ddev->type, ddev->feature_id);
+	else
+		snprintf(alias,sizeof("dfl:tXXXXfXXXXg{}") + UUID_STRING_LEN,
+				"dfl:t%04Xf%04Xg{%pUL}", ddev->type, ddev->feature_id, &ddev->guid);
 
 	return add_uevent_var(env, "MODALIAS=%s", alias);
 }
@@ -425,6 +439,9 @@ dfl_dev_add(struct dfl_feature_dev_data *fdata,
 		}
 		ddev->param_size = feature->param_size;
 	}
+
+	if (ddev->dfh_version == 1)
+		guid_copy(&ddev->guid, &feature->guid);
 
 	if (ddev->dfh_version == 1)
 		guid_copy(&ddev->guid, &feature->guid);
@@ -770,7 +787,7 @@ struct build_feature_devs_info {
  * @fid: id of this sub feature.
  * @revision: revision of this sub feature
  * @dfh_version: device feature header version.
- * @guid: guid of this sub feature.
+ * @guid: GUID of this sub feature.
  * @mmio_res: mmio resource of this sub feature.
  * @ioaddr: mapped base address of mmio resource.
  * @node: node in sub_features linked list.
@@ -1350,22 +1367,10 @@ create_feature_instance(struct build_feature_devs_info *binfo,
 
 		guid_l = readq(binfo->ioaddr + ofst + GUID_L);
 		guid_h = readq(binfo->ioaddr + ofst + GUID_H);
+		finfo->guid = dfl_guid_init(guid_h, guid_l);
+		dev_dbg(binfo->dev, "dfl: GUID_H = 0x%llx , GUID_L = 0x%llx\n GUID = %pUL\n",
+			guid_h, guid_l, &finfo->guid);
 
-		if (guid_l || guid_h) {
-			dev_dbg(binfo->dev, "dfl: GUID_H = 0x%llx , GUID_L = 0x%llx\n",
-				guid_h, guid_l);
-			finfo->guid = GUID_INIT(FIELD_GET(DFL_GUID_H_A, guid_h),
-						FIELD_GET(DFL_GUID_H_B, guid_h),
-					FIELD_GET(DFL_GUID_H_C, guid_h),
-					FIELD_GET(DFL_GUID_L_D0, guid_l),
-					FIELD_GET(DFL_GUID_L_D1, guid_l),
-					FIELD_GET(DFL_GUID_L_D2, guid_l),
-					FIELD_GET(DFL_GUID_L_D3, guid_l),
-					FIELD_GET(DFL_GUID_L_D4, guid_l),
-					FIELD_GET(DFL_GUID_L_D5, guid_l),
-					FIELD_GET(DFL_GUID_L_D6, guid_l),
-					FIELD_GET(DFL_GUID_L_D7, guid_l));
-		}
 	} else {
 		start = binfo->start + ofst;
 		end = start + size - 1;
