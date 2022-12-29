@@ -43,7 +43,7 @@ static int altera_spi_probe(struct platform_device *pdev)
 	int err = -ENODEV;
 	u16 i;
 
-	host = spi_alloc_master(&pdev->dev, sizeof(struct altera_spi));
+	host = spi_alloc_host(&pdev->dev, sizeof(struct altera_spi));
 	if (!host)
 		return err;
 
