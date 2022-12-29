@@ -131,7 +131,7 @@ static int dfl_spi_altera_probe(struct dfl_device *dfl_dev)
 	void __iomem *base;
 	int err = -ENODEV;
 
-	host = spi_alloc_master(dev, sizeof(struct altera_spi));
+	host = spi_alloc_host(dev, sizeof(struct altera_spi));
 	if (!host)
 		return -ENOMEM;
 
