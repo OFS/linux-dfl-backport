@@ -44,17 +44,27 @@ static int qsfp_dfl_probe(struct dfl_device *dfl_dev)
 	dev_set_drvdata(dev, qsfp);
 
 	ret = qsfp_init_work(qsfp);
-	if (ret)
-		return dev_err_probe(dev, ret,
-				     "Failed to initialize delayed work to read QSFP\n");
+	if (ret) {
+		dev_err_probe(dev, ret,
+			      "Failed to initialize delayed work to read QSFP\n");
+		goto exit;
+	}
 
 	ret = qsfp_register_regmap(qsfp);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
 	if (ret)
-		return ret;
+		goto cancel_work;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
 	ret = device_add_groups(dev, qsfp_mem_groups);
+	if (ret)
+		goto cancel_work;
 #endif
+	return 0;
+
+cancel_work:
+	qsfp_remove_device(qsfp);
+exit:
+	mutex_destroy(&qsfp->lock);
 	return ret;
 }
 
@@ -67,6 +77,7 @@ static void qsfp_dfl_remove(struct dfl_device *dfl_dev)
 	device_remove_groups(dev, qsfp_mem_groups);
 #endif
 	qsfp_remove_device(qsfp);
+	mutex_destroy(&qsfp->lock);
 }
 
 #define FME_FEATURE_ID_QSFP 0x13
