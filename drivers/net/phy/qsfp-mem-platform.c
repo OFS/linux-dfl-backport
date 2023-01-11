@@ -62,6 +62,11 @@ static int qsfp_platform_probe(struct platform_device *pdev)
 	if (ret)
 		goto cancel_work;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
+	ret = device_add_groups(dev, qsfp_mem_groups);
+	if (ret)
+		goto cancel_work;
+#endif
 	return 0;
 
 cancel_work:
@@ -76,6 +81,9 @@ static int qsfp_platform_remove(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct qsfp *qsfp = dev_get_drvdata(dev);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
+	device_remove_groups(dev, qsfp_mem_groups);
+#endif
 	qsfp_remove_device(qsfp);
 	mutex_destroy(&qsfp->lock);
 	return 0;
@@ -94,6 +102,9 @@ static struct platform_driver qsfp_driver = {
 	.resume     = NULL,
 	.driver     = {
 		.name   = "intel,qsfp-mem",
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= 0x803
+		.dev_groups = qsfp_mem_groups,
+#endif
 		.owner  = THIS_MODULE,
 		.of_match_table = intel_fpga_qsfp_mem_ids,
 	},
