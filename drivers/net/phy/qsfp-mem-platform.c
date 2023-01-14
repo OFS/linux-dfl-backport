@@ -101,7 +101,7 @@ static struct platform_driver qsfp_driver = {
 	.suspend    = NULL,
 	.resume     = NULL,
 	.driver     = {
-		.name   = "intel,qsfp-mem",
+		.name   = "qsfp-mem",
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= 0x803
 		.dev_groups = qsfp_mem_groups,
 #endif
@@ -111,7 +111,7 @@ static struct platform_driver qsfp_driver = {
 };
 
 module_platform_driver(qsfp_driver);
-MODULE_ALIAS("platform:intel,qsfp-mem");
+MODULE_ALIAS("platform:qsfp-mem");
 MODULE_DESCRIPTION("Intel(R) Memory based QSFP Platform driver");
 MODULE_AUTHOR("Intel Corporation");
 MODULE_LICENSE("GPL");
