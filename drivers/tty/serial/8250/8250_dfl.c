@@ -52,7 +52,7 @@ static int dfh_get_u64_param_val(struct dfl_device *dfl_dev, int param_id, u64 *
 static int dfl_uart_get_params(struct dfl_device *dfl_dev, struct uart_8250_port *uart)
 {
 	struct device *dev = &dfl_dev->dev;
-	u64 fifo_len, clk_freq, reg_layout;
+	u64 fifo_len = 0, clk_freq = 0, reg_layout = 0;
 	u32 reg_width;
 	int ret;
 
