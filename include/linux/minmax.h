@@ -5,7 +5,7 @@
 #include <linux/version.h>
 
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0) && RHEL_RELEASE_CODE <= 0x804
 #include <linux/kernel.h>
 #else
 #include_next <linux/minmax.h>
