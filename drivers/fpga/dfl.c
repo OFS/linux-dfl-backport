@@ -1055,6 +1055,9 @@ static u64 *find_param(u64 *params, resource_size_t max, int param_id)
 			break;
 
 		next = FIELD_GET(DFHv1_PARAM_HDR_NEXT_OFFSET, v);
+		if (!next)
+			break;
+
 		params += next;
 	}
 
@@ -1072,12 +1075,17 @@ static u64 *find_param(u64 *params, resource_size_t max, int param_id)
 void *dfh_find_param(struct dfl_device *dfl_dev, int param_id, size_t *psize)
 {
 	u64 *phdr = find_param(dfl_dev->params, dfl_dev->param_size, param_id);
+	u64 next;
 
 	if (!phdr)
 		return ERR_PTR(-ENOENT);
 
-	if (psize)
-		*psize = (FIELD_GET(DFHv1_PARAM_HDR_NEXT_OFFSET, *phdr) - 1) * sizeof(u64);
+	if (psize) {
+		next = FIELD_GET(DFHv1_PARAM_HDR_NEXT_OFFSET, *phdr);
+		if (!next)
+			next = 2;
+		*psize = (next - 1) * sizeof(u64);
+	}
 
 	return phdr + 1;
 }
@@ -1191,8 +1199,10 @@ static int dfh_get_param_size(void __iomem *dfh_base, resource_size_t max)
 		v = readq(dfh_base + DFHv1_PARAM_HDR + size);
 
 		next = FIELD_GET(DFHv1_PARAM_HDR_NEXT_OFFSET, v);
-		if (!next)
-			return -EINVAL;
+		if (!next) {
+			pr_warn("DFH parameter size 0 - assuming 16 bytes\n");
+			return size + 2 * sizeof(u64);
+		}
 
 		size += next * sizeof(u64);
 
