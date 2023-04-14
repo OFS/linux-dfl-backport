@@ -202,6 +202,17 @@ config FPGA_DFL_PRIV_FEAT
 	  To compile this driver as a module, choose M here: the module will
 	  be called dfl_priv_feat.
 
+config FPGA_DFL_BRANCH
+	tristate "FPGA DFL Branch Driver"
+	depends on FPGA_DFL
+	help
+	  This is the feature driver for Branch DFL (Device Feature List),
+	  which binds the DFL driver for the branch DFL feature using GUID,
+	  and processes branch parameters and enumerates DFL devices in
+	  the branch list.
+
+	  To compile this as a module, choose M here.
+
 config FPGA_DFL_NIOS_INTEL_PAC_N3000
 	tristate "FPGA DFL NIOS Driver for Intel PAC N3000"
 	depends on FPGA_DFL

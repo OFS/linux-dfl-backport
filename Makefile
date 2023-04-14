@@ -60,6 +60,7 @@ obj-m += dfl-fme-mgr.o
 obj-m += dfl-fme-region.o
 obj-m += dfl-fme-br.o
 obj-m += dfl-priv-feat.o
+obj-m += dfl-branch.o
 obj-m += dfl-hssi.o
 obj-m += dfl-n3000-nios.o
 obj-m += dfl-emif.o
@@ -106,6 +107,7 @@ dfl-fme-y += drivers/fpga/dfl-fme-perf.o
 dfl-fme-y += drivers/fpga/dfl-fme-error.o
 
 dfl-priv-feat-y += drivers/fpga/dfl-priv-feat-main.o
+dfl-branch-y += drivers/fpga/dfl-branch.o
 
 dfl-fme-br-y := drivers/fpga/dfl-fme-br.o
 dfl-fme-mgr-y := drivers/fpga/dfl-fme-mgr.o
