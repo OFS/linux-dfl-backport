@@ -1213,7 +1213,7 @@ static int dfh_get_param_size(void __iomem *dfh_base, resource_size_t max)
 	return -ENOENT;
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0) && RHEL_RELEASE_CODE < 0x808
 static void unrolled_memcpy_fromio(void *to, const volatile void __iomem *from, size_t n)
 {
 	const volatile char __iomem *in = from;
