@@ -20,7 +20,7 @@ https://github.com/OPAE/linux-dfl/.
 install -d %{_pkgdir}
 cp -a LICENSE Makefile drivers include %{_pkgdir}
 cp -a build/dkms/dkms-postinst.sh build/dkms/dkms-postrem.sh %{_pkgdir}
-cp -a build/dkms/dkms-preinst.sh build/dkms/generate-dkms-conf.sh %{_pkgdir}
+cp -a build/dkms/generate-dkms-conf.sh %{_pkgdir}
 sed -E 's/PKGVER/%{version}-%{release}/' build/dkms/dkms.conf.in > %{_pkgdir}/dkms.conf
 install -d $(dirname %{buildroot}%{_dracut})
 echo 'omit_drivers+="%_modules"' > %{buildroot}%{_dracut}

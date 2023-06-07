@@ -15,7 +15,6 @@ install: build
 	cp -a ../LICENSE $(CURDIR)/debian/tmp/usr/src/intel-fpga-dfl-$(PKGVER)/
 	cp -a dkms/dkms-postinst.sh $(CURDIR)/debian/tmp/usr/src/intel-fpga-dfl-$(PKGVER)/
 	cp -a dkms/dkms-postrem.sh $(CURDIR)/debian/tmp/usr/src/intel-fpga-dfl-$(PKGVER)/
-	cp -a dkms/dkms-preinst.sh $(CURDIR)/debian/tmp/usr/src/intel-fpga-dfl-$(PKGVER)/
 	cp -a dkms/generate-dkms-conf.sh $(CURDIR)/debian/tmp/usr/src/intel-fpga-dfl-$(PKGVER)/
 	sed -e 's/PKGVER/$(PKGVER)/' dkms/dkms.conf.in > $(CURDIR)/debian/tmp/usr/src/intel-fpga-dfl-$(PKGVER)/dkms.conf
 	sed -e 's/PKGVER/$(PKGVER)/' debian/intel-fpga-dfl-dkms.postinst.in >$(CURDIR)/debian/intel-fpga-dfl-dkms.postinst
