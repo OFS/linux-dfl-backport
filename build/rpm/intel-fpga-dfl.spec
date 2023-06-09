@@ -23,7 +23,7 @@ cp -a build/dkms/dkms-postinst.sh build/dkms/dkms-postrem.sh %{_pkgdir}
 cp -a build/dkms/generate-dkms-conf.sh %{_pkgdir}
 sed -E 's/PKGVER/%{version}-%{release}/' build/dkms/dkms.conf.in > %{_pkgdir}/dkms.conf
 install -d $(dirname %{buildroot}%{_dracut})
-echo 'omit_drivers+="%_modules"' > %{buildroot}%{_dracut}
+echo 'omit_drivers+=" %_modules "' > %{buildroot}%{_dracut}
 
 %post
 dkms add intel-fpga-dfl/%{version}-%{release} --rpm_safe_upgrade
