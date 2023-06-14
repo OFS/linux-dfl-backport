@@ -10,6 +10,7 @@
  */
 
 #include <linux/fpga-dfl.h>
+#include <linux/pfn.h>
 #include <linux/sched/signal.h>
 #include <linux/uaccess.h>
 #include <linux/mm.h>
@@ -145,7 +146,7 @@ static void afu_dma_unpin_pages(struct dfl_feature_dev_data *fdata,
 static int afu_dma_pin_pages(struct dfl_feature_dev_data *fdata,
 			     struct dfl_afu_dma_region *region)
 {
-	int npages = region->length >> PAGE_SHIFT;
+	int npages = PFN_DOWN(region->length);
 	struct device *dev = &fdata->dev->dev;
 	unsigned int flags = FOLL_LONGTERM;
 	int ret, pinned;
@@ -198,7 +199,7 @@ static void afu_dma_unpin_pages(struct dfl_feature_dev_data *fdata,
 				struct dfl_afu_dma_region *region)
 {
 	struct device *dev = &fdata->dev->dev;
-	long npages = region->length >> PAGE_SHIFT;
+	long npages = PFN_DOWN(region->length);
 
 	unpin_user_pages(region->pages, npages);
 	kfree(region->pages);
@@ -218,7 +219,7 @@ static void afu_dma_unpin_pages(struct dfl_feature_dev_data *fdata,
  */
 static bool afu_dma_check_continuous_pages(struct dfl_afu_dma_region *region)
 {
-	int npages = region->length >> PAGE_SHIFT;
+	int npages = PFN_DOWN(region->length);
 	int i;
 
 	for (i = 0; i < npages - 1; i++)
