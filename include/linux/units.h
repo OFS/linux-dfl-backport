@@ -8,6 +8,7 @@
 #define GIGA    1000000000UL
 #define MEGA    1000000UL
 #define MICRO   1000000UL
+#define MILLI	1000UL
 #else
 #include_next <linux/units.h>
 #endif
