@@ -1213,6 +1213,18 @@ static int dfh_get_param_size(void __iomem *dfh_base, resource_size_t max)
 	return -ENOENT;
 }
 
+static bool dfl_csr_blk_is_outside_mmio(resource_size_t csr_start,
+					resource_size_t csr_end,
+					resource_size_t mmio_start,
+					resource_size_t mmio_end)
+{
+	/*
+	 * CSR start and end is within MMIO space for relative address
+	 */
+	return  !(csr_start >= mmio_start && csr_start <= mmio_end &&
+		csr_end >= mmio_start && csr_end <= mmio_end);
+}
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0)
 static void backport_memcpy_fromio(u64 *to, const volatile void __iomem *from, size_t n)
 {
@@ -1239,6 +1251,8 @@ create_feature_instance(struct build_feature_devs_info *binfo,
 {
 	struct dfl_feature_info *finfo;
 	resource_size_t start, end;
+	resource_size_t csr_size;
+	resource_size_t mmio_end;
 	int dfh_psize = 0;
 	u64 guid_l, guid_h;
 	u8 revision = 0;
@@ -1298,10 +1312,15 @@ create_feature_instance(struct build_feature_devs_info *binfo,
 		}
 
 		v = readq(binfo->ioaddr + ofst + DFHv1_CSR_SIZE_GRP);
-		end = start + FIELD_GET(DFHv1_CSR_SIZE_GRP_SIZE, v) - 1;
-		if (rel_addr && (end > (binfo->start + ofst) + size)) {
+		csr_size = FIELD_GET(DFHv1_CSR_SIZE_GRP_SIZE, v);
+		end = csr_size ? (start + csr_size - 1) : start;
+		mmio_end =  binfo->len ? (binfo->start + binfo->len - 1) : binfo->start;
+
+		if (rel_addr && dfl_csr_blk_is_outside_mmio(start, end, binfo->start, mmio_end)) {
 			kfree(finfo);
-			dev_warn(binfo->dev, "Invalid DFHv1 length at 0x%llx\n", ofst);
+			dev_warn(binfo->dev,
+				 "Out of MMIO, CSR[St=%pa,End=%pa] MMIO[St=%pa,End=%pa]\n",
+				 &start, &end, &binfo->start, &mmio_end);
 			return 0;
 		}
 
