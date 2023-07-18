@@ -193,6 +193,7 @@ help:
 	@echo ""
 	@echo "Package Usage:"
 	@echo " make rpm	Build rpm package from source"
+	@echo " make deb	Build debian package from source"
 	@echo ""
 	@echo "Test Usage:"
 	@echo " make rmmod	Remove modules from running kernel"
