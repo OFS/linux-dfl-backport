@@ -330,7 +330,7 @@ static long xyz_set_dsm(struct dfl_xyz *xyz, struct dfl_xyz_dsm_info *dsm_info)
 		goto out_unpin_pages;
 	}
 
-	xyz->dsm_phys = PFN_PHYS(page_to_pfn(xyz->dsm_pages[0]));
+	xyz->dsm_phys = page_to_phys(xyz->dsm_pages[0]);
 
 	writeq(xyz->dsm_phys, xyz->mmio_base + DFL_XYZ_DSM_BASE);
 
@@ -401,7 +401,6 @@ static long xyz_alloc_table(bool rd, struct dfl_xyz_addr_table *table,
 			    unsigned long *length, phys_addr_t *phys,
 			    void __iomem *addr_table_data)
 {
-	struct page *kpage;
 	unsigned long len;
 
 	if (*addr) {
@@ -426,8 +425,7 @@ static long xyz_alloc_table(bool rd, struct dfl_xyz_addr_table *table,
 		return -ENOMEM;
 	}
 
-	kpage = kmap_to_page(*addr);
-	*phys = PFN_PHYS(page_to_pfn(kpage));
+	*phys = page_to_phys(kmap_to_page(*addr));
 	*length = len;
 
 	writeq(*phys, addr_table_data);
