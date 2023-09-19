@@ -103,6 +103,7 @@ dfl-fme-br-y := drivers/fpga/dfl-fme-br.o
 dfl-fme-mgr-y := drivers/fpga/dfl-fme-mgr.o
 dfl-fme-region-y := drivers/fpga/dfl-fme-region.o
 dfl-pci-y := drivers/fpga/dfl-pci.o
+dfl-pci-y += drivers/fpga/dfl-pci-sva.o
 spi-altera-core-y := drivers/spi/spi-altera-core.o
 spi-altera-dfl-y := drivers/spi/spi-altera-dfl.o
 spi-altera-platform-y := drivers/spi/spi-altera-platform.o

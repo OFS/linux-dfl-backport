@@ -79,7 +79,6 @@ static void cci_pci_free_irq(struct pci_dev *pcidev)
 #define PCIE_DEVICE_ID_SILICOM_PAC_N5011	0x1001
 #define PCIE_DEVICE_ID_SILICOM_PAC_N5013	0x1002
 #define PCIE_DEVICE_ID_SILICOM_PAC_N5014	0x1003
-#define PCIE_DEVICE_ID_INTEL_DFL		0xbcce
 /* PCI Subdevice ID for PCIE_DEVICE_ID_INTEL_DFL */
 #define PCIE_SUBDEVICE_ID_INTEL_N6000		0x1770
 #define PCIE_SUBDEVICE_ID_INTEL_N6001		0x1771
@@ -90,7 +89,6 @@ static void cci_pci_free_irq(struct pci_dev *pcidev)
 #define PCIE_DEVICE_ID_VF_INT_6_X		0xBCC1
 #define PCIE_DEVICE_ID_VF_DSC_1_X		0x09C5
 #define PCIE_DEVICE_ID_INTEL_PAC_D5005_VF	0x0B2C
-#define PCIE_DEVICE_ID_INTEL_DFL_VF		0xbccf
 
 static struct pci_device_id cci_pcie_id_tbl[] = {
 	{PCI_DEVICE(PCI_VENDOR_ID_INTEL, PCIE_DEVICE_ID_PF_INT_5_X),},
@@ -403,6 +401,8 @@ int cci_pci_probe(struct pci_dev *pcidev, const struct pci_device_id *pcidevid)
 		return ret;
 	}
 
+	dfl_pci_sva_add_dev(pcidev);
+
 	ret = pci_enable_pcie_error_reporting(pcidev);
 	if (ret && ret != -EINVAL)
 		dev_info(&pcidev->dev, "PCIE AER unavailable %d.\n", ret);
@@ -486,7 +486,25 @@ static struct pci_driver cci_pci_driver = {
 	.sriov_configure = cci_pci_sriov_configure,
 };
 
-module_pci_driver(cci_pci_driver);
+static int __init cci_pci_init_module(void)
+{
+	int ret;
+
+	ret = dfl_pci_sva_init();
+	if (ret)
+		return ret;
+
+	return pci_register_driver(&cci_pci_driver);
+}
+
+static void __exit cci_pci_cleanup_module(void)
+{
+	dfl_pci_sva_cleanup();
+	pci_unregister_driver(&cci_pci_driver);
+}
+
+module_init(cci_pci_init_module);
+module_exit(cci_pci_cleanup_module);
 
 MODULE_DESCRIPTION("FPGA DFL PCIe Device Driver");
 MODULE_AUTHOR("Intel Corporation");

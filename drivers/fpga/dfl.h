@@ -34,6 +34,10 @@
 /* plus one for fme device */
 #define MAX_DFL_FEATURE_DEV_NUM    (MAX_DFL_FPGA_PORT_NUM + 1)
 
+/* Device IDs of DFL-managed functions */
+#define PCIE_DEVICE_ID_INTEL_DFL	0xbcce
+#define PCIE_DEVICE_ID_INTEL_DFL_VF	0xbccf
+
 /* Reserved 0xfe for Header Group Register and 0xff for AFU */
 #define FEATURE_ID_FIU_HEADER		0xfe
 #define FEATURE_ID_AFU			0xff
@@ -617,5 +621,9 @@ long dfl_feature_ioctl_get_num_irqs(struct platform_device *pdev,
 long dfl_feature_ioctl_set_irq(struct platform_device *pdev,
 			       struct dfl_feature *feature,
 			       unsigned long arg);
+
+int dfl_pci_sva_init(void);
+void dfl_pci_sva_cleanup(void);
+void dfl_pci_sva_add_dev(struct pci_dev *pdev);
 
 #endif /* __FPGA_DFL_H */
