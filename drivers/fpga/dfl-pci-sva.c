@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0-only
 /*
  * Manage PASID and IOMMU binding for FPGA ports supporting shared
  * virtual addressing.
@@ -23,13 +23,13 @@
  * until the file is closed or DFL_PCI_SVA_UNBIND_DEV.
  */
 
+#include <linux/fpga-dfl.h>
+#include <linux/iommu.h>
+#include <linux/kernel.h>
+#include <linux/miscdevice.h>
+#include <linux/notifier.h>
 #include <linux/pci.h>
 #include <linux/types.h>
-#include <linux/kernel.h>
-#include <linux/notifier.h>
-#include <linux/iommu.h>
-#include <linux/miscdevice.h>
-#include <linux/fpga-dfl.h>
 
 #include "dfl.h"
 
@@ -81,8 +81,7 @@ static void disable_iommu_sva_feature(struct pci_dev *pdev)
 
 static int dfl_pci_sva_open(struct inode *inode, struct file *file)
 {
-	struct dfl_sva_dev *dev = container_of(file->f_op,
-					       struct dfl_sva_dev, mdev_fops);
+	struct dfl_sva_dev *dev = container_of(file->f_op, struct dfl_sva_dev, mdev_fops);
 
 	pci_dbg(dev->pdev, "%s: pid %d\n", __func__, task_pid_nr(current));
 	file->private_data = NULL;
@@ -91,16 +90,14 @@ static int dfl_pci_sva_open(struct inode *inode, struct file *file)
 
 static int dfl_pci_sva_release(struct inode *inode, struct file *file)
 {
-	struct dfl_sva_dev *dev = container_of(file->f_op,
-					       struct dfl_sva_dev, mdev_fops);
+	struct dfl_sva_dev *dev = container_of(file->f_op, struct dfl_sva_dev, mdev_fops);
 	struct iommu_sva *sva_handle = file->private_data;
 
 	pci_info(dev->pdev, "%s: pid %d, release sva_handle %p\n", __func__,
 		 task_pid_nr(current), sva_handle);
 
-	if (!sva_handle) {
+	if (!sva_handle)
 		return 0;
-	}
 
 	iommu_sva_unbind_device(sva_handle);
 	file->private_data = NULL;
@@ -149,8 +146,7 @@ static long ioctl_sva_unbind_dev(struct dfl_sva_dev *dev,
 static long dfl_pci_sva_ioctl(struct file *file, unsigned int cmd,
 			      unsigned long arg)
 {
-	struct dfl_sva_dev *dev = container_of(file->f_op,
-					       struct dfl_sva_dev, mdev_fops);
+	struct dfl_sva_dev *dev = container_of(file->f_op, struct dfl_sva_dev, mdev_fops);
 	struct iommu_sva **sva_handle_p;
 	long ret;
 
@@ -174,6 +170,13 @@ static long dfl_pci_sva_ioctl(struct file *file, unsigned int cmd,
 	return ret;
 }
 
+static const struct file_operations dfl_mdev_fops = {
+	.open = dfl_pci_sva_open,
+	.release = dfl_pci_sva_release,
+	.unlocked_ioctl = dfl_pci_sva_ioctl,
+	.owner = THIS_MODULE,
+};
+
 static int add_dfl_mdev(struct dfl_sva_dev *dev)
 {
 	struct pci_dev *pdev = dev->pdev;
@@ -185,10 +188,7 @@ static int add_dfl_mdev(struct dfl_sva_dev *dev)
 		 PCI_SLOT(pdev->devfn),
 		 PCI_FUNC(pdev->devfn));
 
-	dev->mdev_fops.open = dfl_pci_sva_open;
-	dev->mdev_fops.release = dfl_pci_sva_release;
-	dev->mdev_fops.unlocked_ioctl = dfl_pci_sva_ioctl;
-	dev->mdev_fops.owner = THIS_MODULE;
+	dev->mdev_fops = dfl_mdev_fops;
 
 	dev->mdev.minor = MISC_DYNAMIC_MINOR;
 	dev->mdev.name = dev->mdev_name;
@@ -227,34 +227,36 @@ void dfl_pci_sva_add_dev(struct pci_dev *pdev)
 	 * Consider new DFL and DFL_VF devices, adding them to dfl_dev_list
 	 * if they support shared virtual addressing.
 	 */
-	if (is_dfl_device(pdev)) {
-		mutex_lock(&dfl_dev_list_mutex);
-		/* Nothing to do if the device was already added */
-		list_for_each_entry(cur, &dfl_dev_list, pdev_next) {
-			if (cur->pdev == pdev)
-				goto out_unlock;
-		}
+	if (!is_dfl_device(pdev))
+		return;
 
-		/* Manage only devices with SVA features (returns 0 here) */
-		if (enable_iommu_sva_feature(pdev))
+	mutex_lock(&dfl_dev_list_mutex);
+	/* Nothing to do if the device was already added */
+	list_for_each_entry(cur, &dfl_dev_list, pdev_next) {
+		if (cur->pdev == pdev)
 			goto out_unlock;
-
-		cur = kzalloc(sizeof(struct dfl_sva_dev), GFP_KERNEL);
-		if (!cur)
-			goto out_disable;
-
-		pci_info(pdev, "dfl-sva add device\n");
-		cur->pdev = pdev;
-
-		ret = add_dfl_mdev(cur);
-		if (ret) {
-			kfree(cur);
-			goto out_disable;
-		}
-
-		list_add(&cur->pdev_next, &dfl_dev_list);
-		mutex_unlock(&dfl_dev_list_mutex);
 	}
+
+	/* Manage only devices with SVA features (returns 0 here) */
+	ret = enable_iommu_sva_feature(pdev);
+	if (ret)
+		goto out_unlock;
+
+	cur = kzalloc(sizeof(struct dfl_sva_dev), GFP_KERNEL);
+	if (!cur)
+		goto out_disable;
+
+	pci_info(pdev, "dfl-sva add device\n");
+	cur->pdev = pdev;
+
+	ret = add_dfl_mdev(cur);
+	if (ret) {
+		kfree(cur);
+		goto out_disable;
+	}
+
+	list_add(&cur->pdev_next, &dfl_dev_list);
+	mutex_unlock(&dfl_dev_list_mutex);
 
 	return;
 
