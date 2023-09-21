@@ -302,14 +302,30 @@ static int sva_bus_notifier(struct notifier_block *nb,
 	return 0;
 }
 
-int dfl_pci_sva_init(void)
+static int sva_init_dev(struct device *dev, void *data)
 {
-	INIT_LIST_HEAD(&dfl_dev_list);
-	sva_nb.notifier_call = sva_bus_notifier;
-	return bus_register_notifier(&pci_bus_type, &sva_nb);
+	dfl_pci_sva_add_dev(to_pci_dev(dev));
+	return 0;
 }
 
-void dfl_pci_sva_cleanup(void)
+static int __init dfl_pci_sva_init_module(void)
+{
+	int ret;
+
+	INIT_LIST_HEAD(&dfl_dev_list);
+	sva_nb.notifier_call = sva_bus_notifier;
+	ret = bus_register_notifier(&pci_bus_type, &sva_nb);
+	if (ret)
+		return ret;
+
+	/*
+	 * Discover devices already added. Devices added later will be detected
+	 * by the notifier.
+	 */
+	return bus_for_each_dev(&pci_bus_type, NULL, NULL, sva_init_dev);
+}
+
+static void __exit dfl_pci_sva_cleanup_module(void)
 {
 	struct dfl_sva_dev *cur, *tmp;
 
@@ -324,3 +340,10 @@ void dfl_pci_sva_cleanup(void)
 	INIT_LIST_HEAD(&dfl_dev_list);
 	mutex_unlock(&dfl_dev_list_mutex);
 }
+
+module_init(dfl_pci_sva_init_module);
+module_exit(dfl_pci_sva_cleanup_module);
+
+MODULE_DESCRIPTION("FPGA DFL PCIe Shared Virtual Addressing Device Driver");
+MODULE_AUTHOR("Intel Corporation");
+MODULE_LICENSE("GPL v2");

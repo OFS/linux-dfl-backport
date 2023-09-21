@@ -401,8 +401,6 @@ int cci_pci_probe(struct pci_dev *pcidev, const struct pci_device_id *pcidevid)
 		return ret;
 	}
 
-	dfl_pci_sva_add_dev(pcidev);
-
 	ret = pci_enable_pcie_error_reporting(pcidev);
 	if (ret && ret != -EINVAL)
 		dev_info(&pcidev->dev, "PCIE AER unavailable %d.\n", ret);
@@ -486,25 +484,7 @@ static struct pci_driver cci_pci_driver = {
 	.sriov_configure = cci_pci_sriov_configure,
 };
 
-static int __init cci_pci_init_module(void)
-{
-	int ret;
-
-	ret = dfl_pci_sva_init();
-	if (ret)
-		return ret;
-
-	return pci_register_driver(&cci_pci_driver);
-}
-
-static void __exit cci_pci_cleanup_module(void)
-{
-	dfl_pci_sva_cleanup();
-	pci_unregister_driver(&cci_pci_driver);
-}
-
-module_init(cci_pci_init_module);
-module_exit(cci_pci_cleanup_module);
+module_pci_driver(cci_pci_driver);
 
 MODULE_DESCRIPTION("FPGA DFL PCIe Device Driver");
 MODULE_AUTHOR("Intel Corporation");
