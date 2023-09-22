@@ -27,23 +27,35 @@
 #include <linux/iommu.h>
 #include <linux/kernel.h>
 #include <linux/miscdevice.h>
+#include <linux/mutex.h>
 #include <linux/notifier.h>
 #include <linux/pci.h>
 #include <linux/types.h>
 
 #include "dfl.h"
 
+/* Device IDs of DFL-managed functions */
+#define PCIE_DEVICE_ID_INTEL_DFL       0xbcce
+#define PCIE_DEVICE_ID_INTEL_DFL_VF    0xbccf
+
 static struct notifier_block sva_nb;
 
 static DEFINE_MUTEX(dfl_dev_list_mutex);
 static LIST_HEAD(dfl_dev_list);
+
+struct dfl_sva_handle {
+	struct iommu_sva *sva_handle;	  /* Handle for process SVA binding with PASID */
+	struct list_head sva_next;
+};
 
 struct dfl_sva_dev {
 	struct pci_dev *pdev;		  /* PCIe device to bind */
 	struct miscdevice mdev;		  /* /dev/dfl-pci-sva/<addr> device */
 	char mdev_name[64];		  /* dfl-pci-sva!<addr> */
 	struct file_operations mdev_fops; /* dfl-pci-sva file ops */
+	struct list_head sva_next;	  /* List of all SVA bindings, one per file descriptor */
 	struct list_head pdev_next;	  /* List of all managed devices */
+	struct mutex mutex;
 };
 
 /*
@@ -82,32 +94,74 @@ static void disable_iommu_sva_feature(struct pci_dev *pdev)
 static int dfl_pci_sva_open(struct inode *inode, struct file *file)
 {
 	struct dfl_sva_dev *dev = container_of(file->f_op, struct dfl_sva_dev, mdev_fops);
+	struct pci_dev *pdev;
+	struct dfl_sva_handle *sva;
+	int ret = 0;
 
-	pci_dbg(dev->pdev, "%s: pid %d\n", __func__, task_pid_nr(current));
-	file->private_data = NULL;
-	return 0;
+	mutex_lock(&dev->mutex);
+	pdev = dev->pdev;
+
+	if (!pdev) {
+		ret = -EBUSY;
+		goto out_unlock;
+	}
+
+	sva = kzalloc(sizeof(struct dfl_sva_handle), GFP_KERNEL);
+	if (!sva) {
+		ret = -ENOMEM;
+		goto out_unlock;
+	}
+
+	list_add(&sva->sva_next, &dev->sva_next);
+	file->private_data = sva;
+
+	pci_dbg(pdev, "%s: pid %d\n", __func__, task_pid_nr(current));
+
+out_unlock:
+	mutex_unlock(&dev->mutex);
+	return ret;
 }
 
 static int dfl_pci_sva_release(struct inode *inode, struct file *file)
 {
 	struct dfl_sva_dev *dev = container_of(file->f_op, struct dfl_sva_dev, mdev_fops);
-	struct iommu_sva *sva_handle = file->private_data;
+	struct dfl_sva_handle *sva = file->private_data;
 
-	pci_info(dev->pdev, "%s: pid %d, release sva_handle %p\n", __func__,
-		 task_pid_nr(current), sva_handle);
+	mutex_lock(&dev->mutex);
 
-	if (!sva_handle)
+	if (dev->pdev) {
+		pci_info(dev->pdev, "%s: pid %d, release sva_handle %p\n", __func__,
+			 task_pid_nr(current), sva->sva_handle);
+	}
+
+	/* Drop the IOMMU binding and release the sva_handle */
+	if (sva->sva_handle)
+		iommu_sva_unbind_device(sva->sva_handle);
+	list_del(&sva->sva_next);
+	kfree(sva);
+
+	if (!dev->pdev && list_empty(&dev->sva_next)) {
+		/*
+		 * The device was deleted while the sva file handle was open. It has already
+		 * been removed from the device dfl_dev_list but the memory needs to be
+		 * released. dev->mutex can be ignored since it is in the memory being freed.
+		 */
+		kfree(dev);
+		pr_debug("%s: released device handle, pid %d\n", __func__, task_pid_nr(current));
 		return 0;
+	}
 
-	iommu_sva_unbind_device(sva_handle);
-	file->private_data = NULL;
+	mutex_unlock(&dev->mutex);
 	return 0;
 }
 
-static long ioctl_sva_bind_dev(struct dfl_sva_dev *dev,
-				 struct iommu_sva **sva_handle_p)
+static long ioctl_sva_bind_dev(struct dfl_sva_dev *dev, struct iommu_sva **sva_handle_p)
 {
 	struct iommu_sva *handle;
+
+	/* Was the device deleted while file handle is open? */
+	if (!dev->pdev)
+		return -ENODEV;
 
 	if (!current->mm)
 		return -EINVAL;
@@ -129,9 +183,12 @@ static long ioctl_sva_bind_dev(struct dfl_sva_dev *dev,
 	return current->mm->pasid;
 }
 
-static long ioctl_sva_unbind_dev(struct dfl_sva_dev *dev,
-				 struct iommu_sva **sva_handle_p)
+static long ioctl_sva_unbind_dev(struct dfl_sva_dev *dev, struct iommu_sva **sva_handle_p)
 {
+	/* Was the device deleted while file handle is open? */
+	if (!dev->pdev)
+		return -ENODEV;
+
 	pci_info(dev->pdev, "%s: pid %d, unbind sva_handle %p\n", __func__,
 		 task_pid_nr(current), *sva_handle_p);
 
@@ -147,26 +204,27 @@ static long dfl_pci_sva_ioctl(struct file *file, unsigned int cmd,
 			      unsigned long arg)
 {
 	struct dfl_sva_dev *dev = container_of(file->f_op, struct dfl_sva_dev, mdev_fops);
-	struct iommu_sva **sva_handle_p;
+	struct dfl_sva_handle *sva = file->private_data;
 	long ret;
 
-	sva_handle_p = (struct iommu_sva **)&file->private_data;
+	mutex_lock(&dev->mutex);
 
 	switch (cmd) {
 	case DFL_FPGA_GET_API_VERSION:
 		ret = DFL_FPGA_API_VERSION;
 		break;
 	case DFL_PCI_SVA_BIND_DEV:
-		ret = ioctl_sva_bind_dev(dev, sva_handle_p);
+		ret = ioctl_sva_bind_dev(dev, &sva->sva_handle);
 		break;
 	case DFL_PCI_SVA_UNBIND_DEV:
-		ret = ioctl_sva_unbind_dev(dev, sva_handle_p);
+		ret = ioctl_sva_unbind_dev(dev, &sva->sva_handle);
 		break;
 	default:
-		pci_info(dev->pdev, "%x cmd not handled", cmd);
+		pci_info(dev->pdev, "0x%x cmd not handled", cmd);
 		ret = -EINVAL;
 	}
 
+	mutex_unlock(&dev->mutex);
 	return ret;
 }
 
@@ -188,6 +246,7 @@ static int add_dfl_mdev(struct dfl_sva_dev *dev)
 		 PCI_SLOT(pdev->devfn),
 		 PCI_FUNC(pdev->devfn));
 
+	INIT_LIST_HEAD(&dev->sva_next);
 	dev->mdev_fops = dfl_mdev_fops;
 
 	dev->mdev.minor = MISC_DYNAMIC_MINOR;
@@ -195,6 +254,7 @@ static int add_dfl_mdev(struct dfl_sva_dev *dev)
 	dev->mdev.fops = &dev->mdev_fops;
 	dev->mdev.mode = 0400;
 
+	mutex_init(&dev->mutex);
 	misc_register(&dev->mdev);
 
 	return 0;
@@ -202,9 +262,35 @@ static int add_dfl_mdev(struct dfl_sva_dev *dev)
 
 static void del_dfl_mdev(struct dfl_sva_dev *dev)
 {
+	struct dfl_sva_handle *sva;
+
+	mutex_lock(&dev->mutex);
 	pci_info(dev->pdev, "dfl-sva delete device\n");
 	misc_deregister(&dev->mdev);
+
+	list_for_each_entry(sva, &dev->sva_next, sva_next) {
+		if (sva->sva_handle) {
+			pci_info(dev->pdev, "dfl-sva force unbind sva_handle %p\n", sva->sva_handle);
+			iommu_sva_unbind_device(sva->sva_handle);
+			sva->sva_handle = NULL;
+		}
+	}
+
 	disable_iommu_sva_feature(dev->pdev);
+	dev->pdev = NULL;
+
+	/*
+	 * If the miscdevice is not open then delete the dfl_sva_dev entry.
+	 * The entry can be deleted even though dev->mutex is held. The mutex
+	 * is inside the memory being freed.
+	 *
+	 * If there is an open handle to miscdevice, keep the dfl_sva_dev.
+	 * It will be freed when the file is closed.
+	 */
+	if (list_empty(&dev->sva_next))
+		kfree(dev);
+	else
+		mutex_unlock(&dev->mutex);
 }
 
 static inline bool is_dfl_device(struct pci_dev *pdev)
@@ -218,7 +304,7 @@ static inline bool is_dfl_device(struct pci_dev *pdev)
  * Consider adding a new device. This is called both by new dfl-pci probes
  * and from the PCIe bus notifier.
  */
-void dfl_pci_sva_add_dev(struct pci_dev *pdev)
+static void dfl_pci_sva_add_dev(struct pci_dev *pdev)
 {
 	int ret;
 	struct dfl_sva_dev *cur;
@@ -274,9 +360,8 @@ static void dfl_pci_sva_del_dev(struct pci_dev *pdev)
 		mutex_lock(&dfl_dev_list_mutex);
 		list_for_each_entry(cur, &dfl_dev_list, pdev_next) {
 			if (cur->pdev == pdev) {
-				del_dfl_mdev(cur);
 				list_del(&cur->pdev_next);
-				kfree(cur);
+				del_dfl_mdev(cur);
 				break;
 			}
 		}
@@ -334,7 +419,6 @@ static void __exit dfl_pci_sva_cleanup_module(void)
 	mutex_lock(&dfl_dev_list_mutex);
 	list_for_each_entry_safe(cur, tmp, &dfl_dev_list, pdev_next) {
 		del_dfl_mdev(cur);
-		kfree(cur);
 	}
 
 	INIT_LIST_HEAD(&dfl_dev_list);
