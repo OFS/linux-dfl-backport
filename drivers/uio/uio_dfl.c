@@ -190,5 +190,8 @@ module_dfl_driver(uio_dfl_driver);
 
 MODULE_DESCRIPTION("Generic DFL driver for Userspace I/O devices");
 MODULE_ALIAS("dfl:t0000f0015");
+MODULE_ALIAS("dfl:t0000f0020");
+MODULE_ALIAS("dfl:t0000f0023");
+MODULE_ALIAS("dfl:t0001f0014");
 MODULE_AUTHOR("Intel Corporation");
 MODULE_LICENSE("GPL v2");
