@@ -189,6 +189,7 @@ static struct dfl_driver uio_dfl_driver = {
 module_dfl_driver(uio_dfl_driver);
 
 MODULE_DESCRIPTION("Generic DFL driver for Userspace I/O devices");
+MODULE_ALIAS("dfl:t0000f0010");
 MODULE_ALIAS("dfl:t0000f0015");
 MODULE_ALIAS("dfl:t0000f0020");
 MODULE_ALIAS("dfl:t0000f0023");
