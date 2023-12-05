@@ -1,0 +1,51 @@
+name: Build kernel development containers
+
+permissions:
+  packages: write
+
+on:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - '.github/workflows/container.yml'
+      - 'container/**'
+
+  pull_request:
+    branches:
+      - 'main'
+    paths:
+      - '.github/workflows/container.yml'
+      - 'container/**'
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        image:
+          - rockylinux-8-kernel-devel
+          - ubuntu-22.04-kernel-devel
+
+    env:
+      image: ghcr.io/ofs/linux-dfl-backport/${{ matrix.image }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Build kernel development image
+      run: docker build -t "$image" -f container/${{ matrix.image }}/Dockerfile .
+
+    - name: Log in to registry
+      if: github.event_name == 'push'
+      run: echo "$token" | docker login ghcr.io -u "$GITHUB_REPOSITORY_OWNER" --password-stdin
+      env:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Push image to registry
+      if: github.event_name == 'push'
+      run: docker image push "$image"
