@@ -1,0 +1,69 @@
+name: Build dkms packages
+
+on:
+  push:
+    branches:
+      - 'intel/**'
+    paths:
+      - '.github/workflows/dkms.yml'
+      - 'Makefile'
+      - 'build/**'
+      - 'drivers/**'
+      - 'include/**'
+
+  pull_request:
+    branches:
+      - 'intel/**'
+    paths:
+      - '.github/workflows/dkms.yml'
+      - 'Makefile'
+      - 'build/**'
+      - 'drivers/**'
+      - 'include/**'
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - os: rockylinux-8
+            pkg: rpm
+          - os: ubuntu-22.04
+            pkg: deb
+
+    container:
+      image: ghcr.io/ofs/linux-dfl-backport/${{ matrix.os }}-kernel-devel
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        # Makefile derives the package version from git describe, which will
+        # fall back to the commit hash if no tagged commits are available.
+        # Since Debian package versions must start with a number, this will
+        # fail the build when the hash does not start with a decimal digit.
+        fetch-depth: 0
+        fetch-tags: true
+
+    # The owner of the workspace directory may not match the owner of the
+    # git process in the container, which triggers git's ownership detection.
+    - name: Work around git's ownership detection
+      run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+    # The kernel source is not needed to build dkms packages, but the
+    # Makefile always includes the kernel configuration and will fail
+    # when the kernel source is not available. Override KERNEL since the
+    # running kernel is installed on the host machine, not the container.
+    - name: Build dkms package
+      run: make ${{ matrix.pkg }} KERNEL="$(basename /lib/modules/*)"
+
+    - name: Upload dkms package
+      uses: actions/upload-artifact@v3
+      with:
+        name: linux-dfl-backport-dkms-${{ matrix.os }}-${{ github.run_id }}
+        path: '*.${{ matrix.pkg }}'
+        if-no-files-found: error
