@@ -181,7 +181,7 @@ rpm: build/rpm/intel-fpga-dfl.spec clean
 	@rpmbuild $(RPMBUILDOPTS) $<
 
 deb: clean
-	python build/debian/deb-changelog.py \
+	build/debian/deb-changelog.py \
 		$(BACKPORT_VERSION)-$(BACKPORT_RELEASE) > build/debian/changelog
 	cd build && yes | debuild -uc -us
 
