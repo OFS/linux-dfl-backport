@@ -15,6 +15,7 @@ RUN apt-get -qq update \
     libelf-dev \
     libncurses-dev \
     libssl-dev \
+    linux-image-generic \
     linux-headers-generic \
     openssl \
     pkg-config \
