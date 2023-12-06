@@ -1,0 +1,66 @@
+name: Build and install modules
+
+on:
+  push:
+    branches:
+      - 'intel/**'
+    paths:
+      - '.github/workflows/modules.yml'
+      - 'Makefile'
+      - 'build/**'
+      - 'drivers/**'
+      - 'include/**'
+
+  pull_request:
+    branches:
+      - 'intel/**'
+    paths:
+      - '.github/workflows/modules.yml'
+      - 'Makefile'
+      - 'build/**'
+      - 'drivers/**'
+      - 'include/**'
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        os:
+          - rockylinux-8
+          - ubuntu-22.04
+
+    container:
+      image: ghcr.io/ofs/linux-dfl-backport/${{ matrix.os }}-kernel-devel
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        # Makefile derives the package version from git describe, which will
+        # fall back to the commit hash if no tagged commits are available.
+        # Since Debian package versions must start with a number, this will
+        # fail the build when the hash does not start with a decimal digit.
+        fetch-depth: 0
+        fetch-tags: true
+
+    # The owner of the workspace directory may not match the owner of the
+    # git process in the container, which triggers git's ownership detection.
+    - name: Work around git's ownership detection
+      run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+    - name: Build modules
+      run: make KERNEL="$(basename /lib/modules/*)"
+
+    - name: Install modules
+      run: make KERNEL="$(basename /lib/modules/*)" install
+
+    - name: Upload modules
+      uses: actions/upload-artifact@v3
+      with:
+        name: linux-dfl-backport-modules-${{ matrix.os }}-${{ github.run_id }}
+        path: /lib/modules/*/extra/
+        if-no-files-found: error
