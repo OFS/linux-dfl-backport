@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'intel/**'
+      - 'intel-test/**'
     paths:
       - '.github/workflows/dkms.yml'
       - 'Makefile'
@@ -14,6 +15,7 @@ on:
   pull_request:
     branches:
       - 'intel/**'
+      - 'intel-test/**'
     paths:
       - '.github/workflows/dkms.yml'
       - 'Makefile'
