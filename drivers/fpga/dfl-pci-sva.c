@@ -170,7 +170,7 @@ static long ioctl_sva_bind_dev(struct dfl_sva_dev *dev, struct iommu_sva **sva_h
 	if (*sva_handle_p)
 		return current->mm->pasid;
 
-	handle = iommu_sva_bind_device(&dev->pdev->dev, current->mm, NULL);
+	handle = iommu_sva_bind_device(&dev->pdev->dev, current->mm);
 	pci_info(dev->pdev, "%s: pid %d, bind sva_handle %p, pasid = %d\n",
 		 __func__, task_pid_nr(current),
 		 handle, current->mm->pasid);
