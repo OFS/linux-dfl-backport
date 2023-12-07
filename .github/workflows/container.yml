@@ -26,9 +26,13 @@ jobs:
 
     strategy:
       matrix:
-        image:
-          - rockylinux-8-kernel-devel
-          - ubuntu-22.04-kernel-devel
+        include:
+          - image: rockylinux-kernel-devel
+            container: rockylinux-8-kernel-devel
+            tag: 8
+          - image: ubuntu-kernel-devel
+            container: ubuntu-22.04-kernel-devel
+            tag: 22.04
 
     env:
       image: ghcr.io/ofs/linux-dfl-backport/${{ matrix.image }}
@@ -38,7 +42,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Build kernel development image
-      run: docker build -t "$image" -f container/${{ matrix.image }}/Dockerfile .
+      run: docker build --build-arg tag=${{ matrix.tag }} -t "$image" -f container/${{ matrix.container }}/Dockerfile .
 
     - name: Log in to registry
       if: github.event_name == 'push'

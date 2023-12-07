@@ -1,4 +1,5 @@
-FROM ubuntu:22.04
+ARG tag=22.04
+FROM ubuntu:${tag}
 RUN apt-get -qq update \
     && apt-get -qq upgrade --no-install-recommends \
     bc \
