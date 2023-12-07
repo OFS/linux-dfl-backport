@@ -41,7 +41,7 @@ jobs:
             tag: 22.04
 
     env:
-      image: ghcr.io/ofs/linux-dfl-backport/${{ matrix.image }}
+      image: ghcr.io/ofs/linux-dfl-backport/${{ matrix.image }}:${{ matrix.tag }}
 
     steps:
     - name: Checkout repository
