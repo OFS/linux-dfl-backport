@@ -34,13 +34,15 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: rockylinux-8
+          - vendor: rockylinux
+            release: 8
             pkg: rpm
-          - os: ubuntu-22.04
+          - vendor: ubuntu
+            release: 22.04
             pkg: deb
 
     container:
-      image: ghcr.io/ofs/linux-dfl-backport/${{ matrix.os }}-kernel-devel
+      image: ghcr.io/ofs/linux-dfl-backport/${{ matrix.vendor }}-kernel-devel:${{ matrix.release }}
 
     steps:
     - name: Checkout repository
@@ -68,6 +70,6 @@ jobs:
     - name: Upload dkms package
       uses: actions/upload-artifact@v3
       with:
-        name: linux-dfl-backport-dkms-${{ matrix.os }}-${{ github.run_id }}
+        name: linux-dfl-backport-dkms-${{ matrix.vendor }}-${{ matrix.release }}-${{ github.run_id }}
         path: '*.${{ matrix.pkg }}'
         if-no-files-found: error
