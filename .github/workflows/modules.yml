@@ -5,6 +5,8 @@ on:
     branches:
       - 'intel/**'
       - 'intel-test/**'
+    tags:
+      - 'intel-*'
     paths:
       - '.github/workflows/modules.yml'
       - 'Makefile'
