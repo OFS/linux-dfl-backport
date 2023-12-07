@@ -30,6 +30,12 @@ jobs:
           - image: rockylinux-kernel-devel
             container: rockylinux-8-kernel-devel
             tag: 8
+          - image: rockylinux-kernel-devel
+            container: rockylinux-8-kernel-devel
+            tag: 8.6
+          - image: rockylinux-kernel-devel
+            container: rockylinux-8-kernel-devel
+            tag: 8.8
           - image: ubuntu-kernel-devel
             container: ubuntu-22.04-kernel-devel
             tag: 22.04
