@@ -88,6 +88,7 @@ ifeq ($(CONFIG_IOMMU_SVA),y)
 obj-m += dfl-pci-sva.o
 endif
 obj-m += dfl-platform.o
+obj-m += dfl-cxl-cache.o
 
 ptp_dfl_tod-y := drivers/ptp/ptp_dfl_tod.o
 regmap-mmio-y := drivers/base/regmap/regmap-mmio.o
@@ -114,6 +115,7 @@ ifeq ($(CONFIG_IOMMU_SVA),y)
 dfl-pci-sva-y := drivers/fpga/dfl-pci-sva.o
 endif
 dfl-platform-y := drivers/fpga/dfl-platform.o
+dfl-cxl-cache-y := drivers/fpga/dfl-cxl-cache.o
 spi-altera-core-y := drivers/spi/spi-altera-core.o
 spi-altera-dfl-y := drivers/spi/spi-altera-dfl.o
 spi-altera-platform-y := drivers/spi/spi-altera-platform.o
