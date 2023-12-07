@@ -1,4 +1,5 @@
-FROM rockylinux:8
+ARG tag=8
+FROM rockylinux:${tag}
 # The PowerTools repository is needed for dwarves, which is a
 # build dependency of the kernel makefile target rpm-pkg.
 # The EPEL repository is needed for dkms.
