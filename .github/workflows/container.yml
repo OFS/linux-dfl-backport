@@ -32,6 +32,9 @@ jobs:
             tag: 8
           - image: rockylinux-kernel-devel
             container: rockylinux-8-kernel-devel
+            tag: 8.4
+          - image: rockylinux-kernel-devel
+            container: rockylinux-8-kernel-devel
             tag: 8.6
           - image: rockylinux-kernel-devel
             container: rockylinux-8-kernel-devel
