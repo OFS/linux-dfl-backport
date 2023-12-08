@@ -1,5 +1,8 @@
 ARG tag=8
-FROM rockylinux:${tag}
+# Pull non-official image to retrieve archived versions that were
+# removed from the official library, such as rockylinux:8.4.
+# https://forums.rockylinux.org/t/rockylinux-8-4-not-in-official-rockylinux-docker-images-tag-list/5248
+FROM rockylinux/rockylinux:${tag}
 # https://docs.docker.com/engine/reference/builder/#understand-how-arg-and-from-interact
 ARG tag
 # The PowerTools repository is needed for dwarves, which is a
