@@ -71,13 +71,21 @@ static int enable_iommu_sva_feature(struct pci_dev *pdev)
 {
 	int ret;
 
+	/* Before commit 34b48c704d19 ("iommu: Separate IOMMU_DEV_FEAT_IOPF
+	 * from IOMMU_DEV_FEAT_SVA"), the IOMMU-managed I/O Page Faults
+	 * (IOPF) feature was implied by IOMMU_DEV_FEAT_SVA.
+	 */
+#if !(LINUX_VERSION_CODE < KERNEL_VERSION(5, 13, 0) && RHEL_RELEASE_CODE < 0x806)
 	ret = iommu_dev_enable_feature(&pdev->dev, IOMMU_DEV_FEAT_IOPF);
 	if (ret)
 		return ret;
+#endif
 
 	ret = iommu_dev_enable_feature(&pdev->dev, IOMMU_DEV_FEAT_SVA);
 	if (ret) {
+#if !(LINUX_VERSION_CODE < KERNEL_VERSION(5, 13, 0) && RHEL_RELEASE_CODE < 0x806)
 		iommu_dev_disable_feature(&pdev->dev, IOMMU_DEV_FEAT_IOPF);
+#endif
 		return ret;
 	}
 
@@ -88,7 +96,9 @@ static int enable_iommu_sva_feature(struct pci_dev *pdev)
 static void disable_iommu_sva_feature(struct pci_dev *pdev)
 {
 	iommu_dev_disable_feature(&pdev->dev, IOMMU_DEV_FEAT_SVA);
+#if !(LINUX_VERSION_CODE < KERNEL_VERSION(5, 13, 0) && RHEL_RELEASE_CODE < 0x806)
 	iommu_dev_disable_feature(&pdev->dev, IOMMU_DEV_FEAT_IOPF);
+#endif
 	pci_info(pdev, "Disabled IOPF and SVA features\n");
 }
 
