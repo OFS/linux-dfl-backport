@@ -47,6 +47,9 @@ jobs:
             release: '8.8'
             pkg: rpm
           - vendor: ubuntu
+            release: '20.04'
+            pkg: deb
+          - vendor: ubuntu
             release: '22.04'
             pkg: deb
 
