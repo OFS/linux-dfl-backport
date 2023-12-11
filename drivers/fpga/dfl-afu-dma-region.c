@@ -18,22 +18,6 @@
 
 #include "dfl-afu.h"
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 6, 0)
-
-#define pin_user_pages_fast get_user_pages_fast
-#define unpin_user_pages put_all_pages
-
-static void put_all_pages(struct page **pages, int npages)
-{
-	int i;
-
-	for (i = 0; i < npages; i++)
-		if (pages[i])
-			put_page(pages[i]);
-}
-
-#endif /* < KERNEL_VERSION(5, 6, 0) */
-
 void afu_dma_region_init(struct dfl_feature_dev_data *fdata)
 {
 	struct dfl_afu *afu = dfl_fpga_fdata_get_private(fdata);
@@ -41,7 +25,7 @@ void afu_dma_region_init(struct dfl_feature_dev_data *fdata)
 	afu->dma_regions = RB_ROOT;
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 3, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 3, 0) && RHEL_RELEASE_CODE < 0x803
 static long afu_dma_adjust_locked_vm(struct device *dev, long npages, bool incr)
 {
 	unsigned long locked, lock_limit;
@@ -113,7 +97,7 @@ static int afu_dma_pin_pages(struct dfl_feature_dev_data *fdata,
 	return 0;
 
 err_put_pages:
-	put_all_pages(region->pages, pinned);
+	put_user_pages(region->pages, pinned);
 err:
 	kfree(region->pages);
 	afu_dma_adjust_locked_vm(dev, npages, false);
@@ -126,7 +110,7 @@ static void afu_dma_unpin_pages(struct dfl_feature_dev_data *fdata,
 	long npages = region->length >> PAGE_SHIFT;
 	struct device *dev = &fdata->dev->dev;
 
-	put_all_pages(region->pages, npages);
+	put_user_pages(region->pages, npages);
 	kfree(region->pages);
 	afu_dma_adjust_locked_vm(dev, npages, false);
 
