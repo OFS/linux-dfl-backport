@@ -46,6 +46,15 @@ jobs:
           - vendor: rockylinux
             release: '8.8'
             pkg: rpm
+          - vendor: rockylinux
+            release: '9'
+            pkg: rpm
+          - vendor: rockylinux
+            release: '9.0'
+            pkg: rpm
+          - vendor: rockylinux
+            release: '9.2'
+            pkg: rpm
           - vendor: ubuntu
             release: '20.04'
             pkg: deb
