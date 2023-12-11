@@ -41,6 +41,9 @@ jobs:
             tag: 8.8
           - image: ubuntu-kernel-devel
             container: ubuntu-22.04-kernel-devel
+            tag: 20.04
+          - image: ubuntu-kernel-devel
+            container: ubuntu-22.04-kernel-devel
             tag: 22.04
 
     env:
