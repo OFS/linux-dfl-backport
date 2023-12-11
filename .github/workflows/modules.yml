@@ -35,19 +35,19 @@ jobs:
       matrix:
         include:
           - vendor: rockylinux
-            release: 8
+            release: '8'
             pkg: rpm
           - vendor: rockylinux
-            release: 8.4
+            release: '8.4'
             pkg: rpm
           - vendor: rockylinux
-            release: 8.6
+            release: '8.6'
             pkg: rpm
           - vendor: rockylinux
-            release: 8.8
+            release: '8.8'
             pkg: rpm
           - vendor: ubuntu
-            release: 22.04
+            release: '22.04'
             pkg: deb
 
     container:
