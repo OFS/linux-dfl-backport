@@ -1,7 +1,7 @@
 ARG tag=22.04
 FROM ubuntu:${tag}
 RUN apt-get -qq update \
-    && apt-get -qq upgrade --no-install-recommends \
+    && DEBIAN_FRONTEND=noninteractive apt-get -qq upgrade --no-install-recommends \
     bc \
     bison \
     build-essential \
