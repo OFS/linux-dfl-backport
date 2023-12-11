@@ -29,22 +29,22 @@ jobs:
         include:
           - image: rockylinux-kernel-devel
             container: rockylinux-8-kernel-devel
-            tag: 8
+            tag: '8'
           - image: rockylinux-kernel-devel
             container: rockylinux-8-kernel-devel
-            tag: 8.4
+            tag: '8.4'
           - image: rockylinux-kernel-devel
             container: rockylinux-8-kernel-devel
-            tag: 8.6
+            tag: '8.6'
           - image: rockylinux-kernel-devel
             container: rockylinux-8-kernel-devel
-            tag: 8.8
+            tag: '8.8'
           - image: ubuntu-kernel-devel
             container: ubuntu-22.04-kernel-devel
-            tag: 20.04
+            tag: '20.04'
           - image: ubuntu-kernel-devel
             container: ubuntu-22.04-kernel-devel
-            tag: 22.04
+            tag: '22.04'
 
     env:
       image: ghcr.io/ofs/linux-dfl-backport/${{ matrix.image }}:${{ matrix.tag }}
