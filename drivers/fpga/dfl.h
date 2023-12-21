@@ -287,9 +287,10 @@ struct dfl_feature_irq_ctx {
  * @priv: priv data of this feature.
  * @guid: sub feature GUID.
  * @dfh_version: version of the DFH
+ * @group_id: specify the group id of the feature.
+ * @inst_id: Instance id of the feature.
  * @param_size: size of dfh parameters
  * @params: point to memory copy of dfh parameters
- * @guid: unique dfl private guid.
  */
 struct dfl_feature {
 	struct platform_device *dev;
@@ -304,6 +305,8 @@ struct dfl_feature {
 	void *priv;
 	guid_t guid;
 	u8 dfh_version;
+	u16 group_id;
+	u16 inst_id;
 	unsigned int param_size;
 	void *params;
 };
@@ -507,6 +510,16 @@ static inline bool dfl_feature_is_private(void __iomem *base)
 static inline u8 dfl_feature_revision(void __iomem *base)
 {
 	return (u8)FIELD_GET(DFH_REVISION, readq(base + DFH));
+}
+
+static inline u16 dfl_feature_inst_id(void __iomem *base)
+{
+	return (u16)FIELD_GET(DFHv1_CSR_SIZE_GRP_INSTANCE_ID, readq(base + DFHv1_CSR_SIZE_GRP));
+}
+
+static inline u16 dfl_feature_group_id(void __iomem *base)
+{
+	return (u16)FIELD_GET(DFHv1_CSR_SIZE_GRP_GROUPING_ID, readq(base + DFHv1_CSR_SIZE_GRP));
 }
 
 #define DFL_GUID_INVALID						\

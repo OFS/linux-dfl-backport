@@ -35,10 +35,11 @@ enum dfl_id_type {
  * @cdev: pointer to DFL FPGA container device this dfl device belongs to.
  * @id_entry: matched id entry in dfl driver's id table.
  * @guid: feature GUID of the dfl device.
- * @dfh_version: version of DFH for the device
+ * @dfh_version: version of DFH for the device.
+ * @group_id: specify the group id of the feature.
+ * @inst_id: Instance id of the feature.
  * @param_size: size of the block parameters in bytes
  * @params: pointer to block of parameters copied memory
- * @guid: feature GUID of the dfl device.
  */
 struct dfl_device {
 	struct device dev;
@@ -53,6 +54,8 @@ struct dfl_device {
 	const struct dfl_device_id *id_entry;
 	guid_t guid;
 	u8 dfh_version;
+	u16 group_id;
+	u16 inst_id;
 	unsigned int param_size;
 	void *params;
 };
