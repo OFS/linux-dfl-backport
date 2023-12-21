@@ -456,6 +456,8 @@ dfl_dev_add(struct dfl_feature_dev_data *fdata,
 	ddev->feature_id = feature->id;
 	ddev->revision = feature->revision;
 	ddev->dfh_version = feature->dfh_version;
+	ddev->group_id = feature->group_id;
+	ddev->inst_id = feature->inst_id;
 	ddev->cdev = fdata->dfl_cdev;
 	if (feature->param_size) {
 		ddev->params = kmemdup(feature->params, feature->param_size, GFP_KERNEL);
@@ -465,9 +467,6 @@ dfl_dev_add(struct dfl_feature_dev_data *fdata,
 		}
 		ddev->param_size = feature->param_size;
 	}
-
-	if (ddev->dfh_version == 1)
-		guid_copy(&ddev->guid, &feature->guid);
 
 	if (ddev->dfh_version == 1)
 		guid_copy(&ddev->guid, &feature->guid);
@@ -814,6 +813,8 @@ struct build_feature_devs_info {
  * @revision: revision of this sub feature
  * @dfh_version: device feature header version.
  * @guid: GUID of this sub feature.
+ * @group_id: specify the group id of the feature.
+ * @inst_id: Instance id of the feature.
  * @mmio_res: mmio resource of this sub feature.
  * @ioaddr: mapped base address of mmio resource.
  * @node: node in sub_features linked list.
@@ -827,6 +828,8 @@ struct dfl_feature_info {
 	u8 revision;
 	u8 dfh_version;
 	guid_t guid;
+	u16 group_id;
+	u16 inst_id;
 	struct resource mmio_res;
 	void __iomem *ioaddr;
 	struct list_head node;
@@ -1366,6 +1369,8 @@ create_feature_instance(struct build_feature_devs_info *binfo,
 	finfo->fid = fid;
 	finfo->revision = revision;
 	finfo->dfh_version = dfh_ver;
+	finfo->group_id = dfl_feature_group_id(binfo->ioaddr + ofst);
+	finfo->inst_id = dfl_feature_inst_id(binfo->ioaddr + ofst);
 	if (dfh_ver == 1) {
 		v = readq(binfo->ioaddr + ofst + DFHv1_CSR_ADDR);
 		addr_off = FIELD_GET(DFHv1_CSR_ADDR_MASK, v) << 1;
