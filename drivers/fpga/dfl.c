@@ -459,6 +459,9 @@ dfl_dev_add(struct dfl_feature_dev_data *fdata,
 	ddev->group_id = feature->group_id;
 	ddev->inst_id = feature->inst_id;
 	ddev->cdev = fdata->dfl_cdev;
+	ddev->gic_arm_ref = feature->gic_arm_ref;
+	ddev->fpga_intr_lines = feature->fpga_intr_lines;
+
 	if (feature->param_size) {
 		ddev->params = kmemdup(feature->params, feature->param_size, GFP_KERNEL);
 		if (!ddev->params) {
@@ -797,13 +800,14 @@ struct build_feature_devs_info {
 	struct dfl_fpga_cdev *cdev;
 	unsigned int nr_irqs;
 	int *irq_table;
-
 	enum dfl_id_type type;
 	void __iomem *ioaddr;
 	resource_size_t start;
 	resource_size_t len;
 	struct list_head sub_features;
 	int feature_num;
+	int gic_arm_ref;
+	int fpga_intr_lines;
 };
 
 /**
@@ -835,6 +839,8 @@ struct dfl_feature_info {
 	struct list_head node;
 	unsigned int irq_base;
 	unsigned int nr_irqs;
+	int gic_arm_ref;
+	int fpga_intr_lines;
 	unsigned int param_size;
 	u64 params[];
 };
@@ -891,6 +897,7 @@ binfo_create_feature_dev_data(struct build_feature_devs_info *binfo)
 	fdata->num = binfo->feature_num;
 	fdata->dfl_cdev = binfo->cdev;
 	fdata->id = FEATURE_DEV_ID_UNUSED;
+
 	mutex_init(&fdata->lock);
 	lockdep_set_class_and_name(&fdata->lock, &dfl_pdata_keys[type],
 				   dfl_pdata_key_strings[type]);
@@ -913,6 +920,8 @@ binfo_create_feature_dev_data(struct build_feature_devs_info *binfo)
 		feature->id = finfo->fid;
 		feature->revision = finfo->revision;
 		feature->dfh_version = finfo->dfh_version;
+		feature->gic_arm_ref = finfo->gic_arm_ref;
+		feature->fpga_intr_lines = finfo->fpga_intr_lines;
 
 		if (finfo->param_size) {
 			feature->params = devm_kmemdup(binfo->dev,
@@ -1371,6 +1380,9 @@ create_feature_instance(struct build_feature_devs_info *binfo,
 	finfo->dfh_version = dfh_ver;
 	finfo->group_id = dfl_feature_group_id(binfo->ioaddr + ofst);
 	finfo->inst_id = dfl_feature_inst_id(binfo->ioaddr + ofst);
+	finfo->gic_arm_ref = binfo->gic_arm_ref;
+	finfo->fpga_intr_lines = binfo->fpga_intr_lines;
+
 	if (dfh_ver == 1) {
 		v = readq(binfo->ioaddr + ofst + DFHv1_CSR_ADDR);
 		addr_off = FIELD_GET(DFHv1_CSR_ADDR_MASK, v) << 1;
@@ -1808,6 +1820,8 @@ dfl_fpga_feature_devs_enumerate(struct dfl_fpga_enum_info *info)
 	binfo->cdev = cdev;
 	INIT_LIST_HEAD(&binfo->sub_features);
 
+	binfo->gic_arm_ref = info->gic_arm_ref;
+	binfo->fpga_intr_lines = info->fpga_intr_lines;
 	binfo->nr_irqs = info->nr_irqs;
 	if (info->nr_irqs)
 		binfo->irq_table = info->irq_table;

@@ -307,6 +307,8 @@ struct dfl_feature {
 	u8 dfh_version;
 	u16 group_id;
 	u16 inst_id;
+	int gic_arm_ref;
+	int fpga_intr_lines;
 	unsigned int param_size;
 	void *params;
 };
@@ -561,6 +563,8 @@ struct dfl_fpga_enum_info {
 	struct list_head dfls;
 	unsigned int nr_irqs;
 	int *irq_table;
+	int gic_arm_ref;
+	int fpga_intr_lines;
 };
 
 /**
