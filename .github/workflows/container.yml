@@ -27,6 +27,12 @@ jobs:
     strategy:
       matrix:
         include:
+          - image: fedora-kernel-devel
+            container: fedora-kernel-devel
+            tag: '39'
+          - image: fedora-kernel-devel
+            container: fedora-kernel-devel
+            tag: 'rawhide'
           - image: rockylinux-kernel-devel
             container: rockylinux-8-kernel-devel
             tag: '8'
