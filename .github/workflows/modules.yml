@@ -40,6 +40,12 @@ jobs:
           - vendor: centos
             release: '8.3.2011'
             pkg: rpm
+          - vendor: fedora
+            release: '39'
+            pkg: rpm
+          - vendor: fedora
+            release: 'rawhide'
+            pkg: rpm
           - vendor: rockylinux
             release: '8'
             pkg: rpm
