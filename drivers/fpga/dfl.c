@@ -300,9 +300,17 @@ static void dfl_bus_remove(struct device *dev)
 
 #define DFL_ALIAS_BUF_LEN 64
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int dfl_bus_uevent(struct device *dev, struct kobj_uevent_env *env)
+#else
+static int dfl_bus_uevent(const struct device *dev, struct kobj_uevent_env *env)
+#endif
 {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 	struct dfl_device *ddev = to_dfl_dev(dev);
+#else
+	const struct dfl_device *ddev = to_dfl_dev(dev);
+#endif
 	char alias[DFL_ALIAS_BUF_LEN];
 
 	scnprintf(alias, DFL_ALIAS_BUF_LEN, "dfl:t%04Xf%04X", ddev->type, ddev->feature_id);
