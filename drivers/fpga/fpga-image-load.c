@@ -532,7 +532,7 @@ static int __init fpga_image_load_class_init(void)
 	int ret;
 	pr_info("FPGA Image Load Framework\n");
 
-	fpga_image_load_class = class_create(THIS_MODULE, "fpga_image_load");
+	fpga_image_load_class = class_create("fpga_image_load");
 	if (IS_ERR(fpga_image_load_class))
 		return PTR_ERR(fpga_image_load_class);
 

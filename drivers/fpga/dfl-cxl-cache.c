@@ -543,7 +543,7 @@ static int dfl_cxl_cache_probe(struct dfl_device *ddev)
 	mutex_lock(&dfl_cxl_cache_class_lock);
 
 	if (!dfl_cxl_cache_class) {
-		dfl_cxl_cache_class = class_create(THIS_MODULE, DFL_CXL_CACHE_DRIVER_NAME);
+		dfl_cxl_cache_class = class_create(DFL_CXL_CACHE_DRIVER_NAME);
 		if (IS_ERR(dfl_cxl_cache_class)) {
 			ret = PTR_ERR(dfl_cxl_cache_class);
 			dfl_cxl_cache_class = NULL;

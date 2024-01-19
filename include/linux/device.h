@@ -50,4 +50,18 @@ static inline int dev_err_probe(const struct device *dev, int err, const char *f
 }
 #endif
 
+/* Before commit 1aaba11da9aa ("driver core: class: remove
+ * module * from class_create()"), the function received the
+ * module pointer which never actually did anything and even
+ * then should not have been required as a parameter.
+ */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 4, 0)
+#undef class_create
+#define class_create(name)				\
+({							\
+	static struct lock_class_key __key;		\
+	__class_create(THIS_MODULE, name, &__key);	\
+})
+#endif
+
 #endif
