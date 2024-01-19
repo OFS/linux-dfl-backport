@@ -84,7 +84,7 @@ static void fw_upload_prog_complete(struct fw_upload_priv *fwlp)
 {
 	mutex_lock(&fwlp->lock);
 	fwlp->progress = FW_UPLOAD_PROG_IDLE;
-	eventfd_signal(fwlp->finished, 1);
+	eventfd_signal(fwlp->finished);
 	mutex_unlock(&fwlp->lock);
 }
 
