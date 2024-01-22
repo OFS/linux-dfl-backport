@@ -25,4 +25,29 @@ class_find_device_by_of_node(struct class *class, const struct device_node *np)
 }
 #endif /* < KERNEL_VERSION(5, 4, 0) */
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 253) || \
+(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 5, 0) && LINUX_VERSION_CODE < KERNEL_VERSION(5, 9, 0))) && RHEL_RELEASE_CODE < 0x804
+/**
+ * Simplified version of upstream dev_err_probe.
+ */
+static inline int dev_err_probe(const struct device *dev, int err, const char *fmt, ...)
+{
+	struct va_format vaf;
+	va_list args;
+
+	va_start(args, fmt);
+	vaf.fmt = fmt;
+	vaf.va = &args;
+
+	if (err != -EPROBE_DEFER)
+		dev_err(dev, "error %pe: %pV", ERR_PTR(err), &vaf);
+	else
+		dev_dbg(dev, "error %pe: %pV", ERR_PTR(err), &vaf);
+
+	va_end(args);
+
+	return err;
+}
+#endif
+
 #endif

@@ -58,24 +58,14 @@ static int dfl_uart_get_params(struct dfl_device *dfl_dev, struct uart_8250_port
 
 	ret = dfh_get_u64_param_val(dfl_dev, DFHv1_PARAM_ID_CLK_FRQ, &clk_freq);
 	if (ret) {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 9, 0) && RHEL_RELEASE_CODE < 0x804
-		dev_err(dev, "missing CLK_FRQ param\n");
-		return ret;
-#else
 		return dev_err_probe(dev, ret, "missing CLK_FRQ param\n");
-#endif
 	}
 
 	uart->port.uartclk = clk_freq;
 
 	ret = dfh_get_u64_param_val(dfl_dev, DFHv1_PARAM_ID_FIFO_LEN, &fifo_len);
 	if (ret) {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 9, 0) && RHEL_RELEASE_CODE < 0x804
-		dev_err(dev, "missing FIFO_LEN param\n");
-		return ret;
-#else
 		return dev_err_probe(dev, ret, "missing FIFO_LEN param\n");
-#endif
   	}
 
 	switch (fifo_len) {
@@ -92,22 +82,12 @@ static int dfl_uart_get_params(struct dfl_device *dfl_dev, struct uart_8250_port
 		break;
 
 	default:
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 9, 0) && RHEL_RELEASE_CODE < 0x804
-		dev_err(dev, "unsupported FIFO_LEN %llu\n", fifo_len);
-		return -EINVAL;
-#else
 		return dev_err_probe(dev, -EINVAL, "unsupported FIFO_LEN %llu\n", fifo_len);
-#endif
 	}
 
 	ret = dfh_get_u64_param_val(dfl_dev, DFHv1_PARAM_ID_REG_LAYOUT, &reg_layout);
 	if (ret) {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 9, 0) && RHEL_RELEASE_CODE < 0x804
-		dev_err(dev, "missing REG_LAYOUT param\n");
-		return ret;
-#else
 		return dev_err_probe(dev, ret, "missing REG_LAYOUT param\n");
-#endif
 	}
 
 	uart->port.regshift = FIELD_GET(DFHv1_PARAM_REG_LAYOUT_SHIFT, reg_layout);
@@ -122,12 +102,7 @@ static int dfl_uart_get_params(struct dfl_device *dfl_dev, struct uart_8250_port
 		break;
 
 	default:
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 9, 0) && RHEL_RELEASE_CODE < 0x804
-		dev_err(dev, "unsupported reg-width %u\n", reg_width);
-		return -EINVAL;
-#else
 		return dev_err_probe(dev, -EINVAL, "unsupported reg-width %u\n", reg_width);
-#endif
 	}
 
 	return 0;
@@ -146,12 +121,7 @@ static int dfl_uart_probe(struct dfl_device *dfl_dev)
 
 	ret = dfl_uart_get_params(dfl_dev, &uart);
 	if (ret < 0) {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 9, 0) && RHEL_RELEASE_CODE < 0x804
-		dev_err(dev, "failed uart feature walk\n");
-		return ret;
-#else
 		return dev_err_probe(dev, ret, "failed uart feature walk\n");
-#endif
 	}
 
 	if (dfl_dev->num_irqs == 1)
@@ -163,12 +133,7 @@ static int dfl_uart_probe(struct dfl_device *dfl_dev)
 
 	dfluart->line = serial8250_register_8250_port(&uart);
 	if (dfluart->line < 0) {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 9, 0) && RHEL_RELEASE_CODE < 0x804
-		dev_err(dev, "unable to register 8250 port.\n");
-		return dfluart->line;
-#else
 		return dev_err_probe(dev, dfluart->line, "unable to register 8250 port.\n");
-#endif
 	}
 
 	dev_set_drvdata(dev, dfluart);
