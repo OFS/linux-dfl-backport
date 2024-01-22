@@ -34,6 +34,12 @@ jobs:
     strategy:
       matrix:
         include:
+          - vendor: centos
+            release: '8.2.2004'
+            pkg: rpm
+          - vendor: centos
+            release: '8.3.2011'
+            pkg: rpm
           - vendor: rockylinux
             release: '8'
             pkg: rpm
