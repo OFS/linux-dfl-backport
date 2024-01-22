@@ -33,6 +33,12 @@ jobs:
           - image: fedora-kernel-devel
             container: fedora-kernel-devel
             tag: 'rawhide'
+          - image: centos-kernel-devel
+            container: centos-8-kernel-devel
+            tag: '8.2.2004'
+          - image: centos-kernel-devel
+            container: centos-8-kernel-devel
+            tag: '8.3.2011'
           - image: rockylinux-kernel-devel
             container: rockylinux-8-kernel-devel
             tag: '8'
