@@ -247,7 +247,7 @@ static int dfl_tod_get_timex(struct ptp_clock_info *ptp, struct timespec64 *ts,
 	ts->tv_sec = seconds;
 #else
 	ts->tv_sec = (__kernel_time_t)seconds;
-#endif        
+#endif
 
 	return 0;
 }
@@ -302,12 +302,7 @@ static int dfl_tod_probe(struct dfl_device *ddev)
 
 	dt->ptp_clock = ptp_clock_register(&dt->ptp_clock_ops, dev);
 	if (IS_ERR(dt->ptp_clock)) {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 9, 0) && RHEL_RELEASE_CODE < 0x804
-		dev_err(dev,
-#else
-		dev_err_probe(dt->dev, PTR_ERR(dt->ptp_clock),
-#endif
-				     "Unable to register PTP clock\n");
+		dev_err_probe(dt->dev, PTR_ERR(dt->ptp_clock), "Unable to register PTP clock\n");
 	}
 
 	return 0;

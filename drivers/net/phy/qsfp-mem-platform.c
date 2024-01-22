@@ -53,12 +53,7 @@ static int qsfp_platform_probe(struct platform_device *pdev)
 
 	ret = qsfp_init_work(qsfp);
 	if (ret) {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 9, 0) && RHEL_RELEASE_CODE < 0x804
-		dev_err(dev,
-#else
-		dev_err_probe(dev, ret,
-#endif
-			      "Failed to initialize delayed work to read QSFP\n");
+		dev_err_probe(dev, ret, "Failed to initialize delayed work to read QSFP\n");
 		goto exit;
 	}
 
