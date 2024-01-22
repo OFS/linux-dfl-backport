@@ -28,6 +28,8 @@
 #include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <linux/types.h>
+#include <linux/sched/signal.h>
+#include "dfl-dma-cxl-common.h"
 
 #define DFL_CXL_CACHE_DRIVER_NAME	"dfl-cxl-cache"
 #define FME_FEATURE_ID_CXL_CACHE	0x25
@@ -109,7 +111,12 @@ static void cxl_cache_unpin_pages(struct device *dev, struct page ***pages, unsi
 	unpin_user_pages(*pages, npages);
 	kfree(*pages);
 	*pages = NULL;
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 3, 0) && RHEL_RELEASE_CODE < 0x803
+	afu_dma_adjust_locked_vm(dev, npages, false);
+#else
 	account_locked_vm(current->mm, npages, false);
+#endif
 
 	dev_dbg(dev, "%ld pages unpinned\n", npages);
 }
@@ -140,7 +147,11 @@ static int cxl_cache_dma_pin_pages(struct dfl_cxl_cache *cxl_cache,
 	const unsigned int flags = FOLL_LONGTERM | FOLL_WRITE;
 	const int npages = PFN_DOWN(region->length);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 3, 0) && RHEL_RELEASE_CODE < 0x803
+	ret = afu_dma_adjust_locked_vm(cxl_cache->dev, npages, false);
+#else
 	ret = account_locked_vm(current->mm, npages, true);
+#endif
 	if (ret)
 		return ret;
 
@@ -167,7 +178,11 @@ unpin_pages:
 free_pages:
 	kfree(region->pages);
 unlock_vm:
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 3, 0) && RHEL_RELEASE_CODE < 0x803
+	afu_dma_adjust_locked_vm(cxl_cache->dev, npages, false);
+#else
 	account_locked_vm(current->mm, npages, false);
+#endif
 	return ret;
 }
 
