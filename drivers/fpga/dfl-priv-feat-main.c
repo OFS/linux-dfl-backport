@@ -71,6 +71,11 @@ static void dfl_priv_feat_dev_destroy(struct platform_device *pdev)
 	mutex_unlock(&fdata->lock);
 }
 
+static const struct attribute_group *dfl_priv_feat_dev_groups[] = {
+	&dfl_priv_feat_group,
+	NULL
+};
+
 static int dfl_priv_feat_probe(struct platform_device *pdev)
 {
 	int ret;
@@ -83,6 +88,12 @@ static int dfl_priv_feat_probe(struct platform_device *pdev)
 	if (ret)
 		goto dev_destroy;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
+	ret = device_add_groups(&pdev->dev, dfl_priv_feat_dev_groups);
+	if (ret)
+		goto dev_destroy;
+#endif
+
 	return 0;
 
 dev_destroy:
@@ -93,21 +104,21 @@ exit:
 
 static int dfl_priv_feat_remove(struct platform_device *pdev)
 {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
+	device_remove_groups(&pdev->dev, dfl_priv_feat_dev_groups);
+#endif
 	dfl_fpga_dev_feature_uinit(pdev);
 	dfl_priv_feat_dev_destroy(pdev);
 
 	return 0;
 }
 
-static const struct attribute_group *dfl_priv_feat_dev_groups[] = {
-	&dfl_priv_feat_group,
-	NULL
-};
-
 static struct platform_driver dfl_priv_feat_driver = {
 	.driver	= {
 		.name       = DFL_FPGA_FEATURE_DEV_PRIV_FEAT,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= 0x803
 		.dev_groups = dfl_priv_feat_dev_groups,
+#endif
 	},
 	.probe   = dfl_priv_feat_probe,
 	.remove  = dfl_priv_feat_remove,
