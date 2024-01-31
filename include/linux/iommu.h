@@ -21,4 +21,15 @@
 #define iommu_sva_bind_device(dev, mm) iommu_sva_bind_device(dev, mm, NULL)
 #endif
 
+/* Commit 2396046d75d3 ("iommu: Add mm_get_enqcmd_pasid() helper function")
+ * added a wrapper for pasid, which was moved to a private data structure in
+ * commit 092edaddb660 ("iommu: Support mm PASID 1:n with sva domains").
+ */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0)
+static inline u32 mm_get_enqcmd_pasid(struct mm_struct *mm)
+{
+	return mm->pasid;
+}
+#endif
+
 #endif /* _BACKPORT_LINUX_IOMMU_H_ */
