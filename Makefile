@@ -176,6 +176,9 @@ $(rules_rmmod): rmmod_%:
 
 $(rules_insmod): insmod_%:
 	@if ! lsmod | grep -q $* && test -f $*.ko; then \
+		[ -n "${CONFIG_REGMAP_SPI_AVMM}" ] && [ $* = intel-m10-bmc-spi ] && modprobe regmap-spi-avmm; \
+		[ $* = n5010-phy ] && modprobe fixed-phy; \
+		[ $* = ptp_dfl_tod ] && modprobe ptp; \
 		[ $* = uio-dfl ] && modprobe uio; \
 		insmod $*.ko $(DYNDBG); \
 	fi
