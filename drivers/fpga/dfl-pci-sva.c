@@ -177,21 +177,21 @@ static long ioctl_sva_bind_dev(struct dfl_sva_dev *dev, struct iommu_sva **sva_h
 	if (!current->mm)
 		return -EINVAL;
 
-	if (*sva_handle_p)
-		return mm_get_enqcmd_pasid(current->mm);
+	if ((handle = *sva_handle_p))
+		return iommu_sva_get_pasid(handle);
 
 	handle = iommu_sva_bind_device(&dev->pdev->dev, current->mm);
-	pci_info(dev->pdev, "%s: pid %d, bind sva_handle %p, pasid = %d\n",
-		 __func__, task_pid_nr(current),
-		 handle, mm_get_enqcmd_pasid(current->mm));
-
 	if (!handle)
 		return -ENODEV;
 	if (IS_ERR(handle))
 		return PTR_ERR(handle);
 
+	pci_info(dev->pdev, "%s: pid %d, bind sva_handle %p, pasid = %d\n",
+		 __func__, task_pid_nr(current),
+		 handle, iommu_sva_get_pasid(handle));
+
 	*sva_handle_p = handle;
-	return mm_get_enqcmd_pasid(current->mm);
+	return iommu_sva_get_pasid(handle);
 }
 
 static long ioctl_sva_unbind_dev(struct dfl_sva_dev *dev, struct iommu_sva **sva_handle_p)
