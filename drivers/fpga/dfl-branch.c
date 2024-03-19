@@ -142,11 +142,7 @@ static void dfl_branch_remove(struct dfl_device *dfl_dev)
 	dfl_fpga_feature_devs_remove(dfl_dev->cdev);
 }
 
-/*
- * GUID for Branch DFL {30c45aea-68f6-42e6-aefb-15b4b5e28284}
- */
-
-#define DFL_BRANCH_GUID "30c45aEa-68f6-42e6-aefb-15b4b5e28284"
+#define DFL_BRANCH_GUID "30C45AEA-68F6-42E6-AEFB-15B4B5E28284"
 
 static const struct dfl_device_id dfl_branch_ids[] = {
 	{ .guid_string = DFL_BRANCH_GUID },
@@ -164,6 +160,7 @@ static struct dfl_driver dfl_branch_driver = {
 };
 module_dfl_driver(dfl_branch_driver);
 
+MODULE_ALIAS("dfl:t*f*g{30C45AEA-68F6-42E6-AEFB-15B4B5E28284}");
 MODULE_DESCRIPTION("DFL Intel Branch DFL driver");
 MODULE_AUTHOR("Intel Corporation");
 MODULE_LICENSE("GPL");
