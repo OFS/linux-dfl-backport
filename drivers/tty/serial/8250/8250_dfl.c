@@ -168,7 +168,7 @@ static struct dfl_driver dfl_uart_driver = {
 };
 module_dfl_driver(dfl_uart_driver);
 
-MODULE_ALIAS("dfl:t0000f0024");
+MODULE_ALIAS("dfl:t0000f0024g{9E6641A6-CA26-CC04-E1DF-0D4ACE8E486C}");
 MODULE_DESCRIPTION("DFL Intel UART driver");
 MODULE_AUTHOR("Intel Corporation");
 MODULE_LICENSE("GPL");
