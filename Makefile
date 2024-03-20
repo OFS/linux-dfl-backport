@@ -47,9 +47,11 @@ endif
 # The module order matters; it determines the module order for
 # both the insmod and rmmod targets. The module order is also
 # leveraged for install packages by the dkms.conf file.
+ifneq ($(CONFIG_FPGA),y)
 obj-m += fpga-mgr.o
 obj-m += fpga-bridge.o
 obj-m += fpga-region.o
+endif
 ifndef CONFIG_FW_UPLOAD
 obj-m += fpga-image-load.o
 endif
