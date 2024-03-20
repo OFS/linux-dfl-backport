@@ -138,3 +138,4 @@ module_platform_driver(dfl_priv_feat_driver);
 MODULE_DESCRIPTION("FPGA Privare Feature driver");
 MODULE_AUTHOR("Intel Corporation");
 MODULE_LICENSE("GPL");
+MODULE_ALIAS("platform:dfl-priv-feat");
