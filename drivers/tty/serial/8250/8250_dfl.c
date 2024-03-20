@@ -150,12 +150,10 @@ static void dfl_uart_remove(struct dfl_device *dfl_dev)
 
 #define FME_FEATURE_ID_UART 0x24
 
-#define FME_GUID_UART \
-	GUID_INIT(0x9e6641a6, 0xca26, 0xcc04, 0xe1, 0xdf, \
-			0x0d, 0x4a, 0xce, 0x8e, 0x48, 0x6c)
+#define DFL_GUID_UART "9E6641A6-CA26-CC04-E1DF-0D4ACE8E486C"
 
 static const struct dfl_device_id dfl_uart_ids[] = {
-	{ FME_ID, FME_FEATURE_ID_UART, .guid = FME_GUID_UART },
+	{ FME_ID, FME_FEATURE_ID_UART, .guid_string = DFL_GUID_UART },
 	{ }
 };
 MODULE_DEVICE_TABLE(dfl, dfl_uart_ids);
@@ -170,7 +168,7 @@ static struct dfl_driver dfl_uart_driver = {
 };
 module_dfl_driver(dfl_uart_driver);
 
-MODULE_ALIAS("dfl:t0000f0024");
+MODULE_ALIAS("dfl:t0000f0024g{9E6641A6-CA26-CC04-E1DF-0D4ACE8E486C}");
 MODULE_DESCRIPTION("DFL Intel UART driver");
 MODULE_AUTHOR("Intel Corporation");
 MODULE_LICENSE("GPL");

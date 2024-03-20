@@ -243,11 +243,49 @@ EXPORT_SYMBOL_GPL(dfl_fpga_check_port_id);
 
 static DEFINE_IDA(dfl_device_ida);
 
+static bool dfl_feature_id_is_match(const struct dfl_device_id *id, struct dfl_device *ddev)
+{
+	return id->type == ddev->type && id->feature_id == ddev->feature_id;
+}
+
+static bool dfl_guid_is_match(const char *guid_str, const guid_t *guid_dev)
+{
+	return dfl_guid_is_valid(guid_dev) && guid_parse_and_compare(guid_str, guid_dev);
+}
+
+static int dfl_match_one_guid(struct device_driver *drv, void *data)
+{
+	struct dfl_driver *ddrv = to_dfl_drv(drv);
+	const struct dfl_device_id *id_entry;
+	struct dfl_device *ddev = data;
+
+	id_entry = ddrv->id_table;
+	if (!id_entry)
+		return 0;
+
+	while (*id_entry->guid_string) {
+		if (dfl_guid_is_match(id_entry->guid_string, &ddev->guid))
+			return 1;
+		id_entry++;
+	}
+	return 0;
+}
+
+static struct bus_type dfl_bus_type;
+
+static bool can_match_guid(struct dfl_device *ddev)
+{
+	return bus_for_each_drv(&dfl_bus_type, NULL, ddev, dfl_match_one_guid) > 0;
+}
+
 static const struct dfl_device_id *
 dfl_match_one_device(const struct dfl_device_id *id, struct dfl_device *ddev)
 {
-	if ((dfl_guid_is_valid(&ddev->guid) && guid_equal(&id->guid, &ddev->guid)) ||
-	    (id->type == ddev->type && id->feature_id == ddev->feature_id))
+	if (dfl_guid_is_match(id->guid_string, &ddev->guid))
+		return id;
+
+	if (dfl_feature_id_is_match(id, ddev) &&
+	    !(dfl_guid_is_valid(&ddev->guid) && can_match_guid(ddev)))
 		return id;
 
 	return NULL;
@@ -261,7 +299,7 @@ static int dfl_bus_match(struct device *dev, struct device_driver *drv)
 
 	id_entry = ddrv->id_table;
 	if (id_entry) {
-		while (id_entry->feature_id || dfl_guid_is_valid(&id_entry->guid)) {
+		while (id_entry->feature_id || *id_entry->guid_string) {
 			if (dfl_match_one_device(id_entry, ddev)) {
 				ddev->id_entry = id_entry;
 				return 1;
@@ -311,12 +349,14 @@ static int dfl_bus_uevent(const struct device *dev, struct kobj_uevent_env *env)
 #else
 	const struct dfl_device *ddev = to_dfl_dev(dev);
 #endif
-	char alias[DFL_ALIAS_BUF_LEN];
+	char alias[sizeof("dfl:tXXXXfXXXXg{}") + UUID_STRING_LEN];
 
-	scnprintf(alias, DFL_ALIAS_BUF_LEN, "dfl:t%04Xf%04X", ddev->type, ddev->feature_id);
-
-	if (!guid_is_null(&ddev->guid))
-		scnprintf(alias + strlen(alias), DFL_ALIAS_BUF_LEN, "g{%pUL}", &ddev->guid);
+	if (guid_is_null(&ddev->guid))
+		snprintf(alias, sizeof("dfl:tXXXXfXXXX"), "dfl:t%04Xf%04X",
+			 ddev->type, ddev->feature_id);
+	else
+		snprintf(alias,sizeof("dfl:tXXXXfXXXXg{}") + UUID_STRING_LEN,
+				"dfl:t%04Xf%04Xg{%pUL}", ddev->type, ddev->feature_id, &ddev->guid);
 
 	return add_uevent_var(env, "MODALIAS=%s", alias);
 }
@@ -416,7 +456,12 @@ dfl_dev_add(struct dfl_feature_dev_data *fdata,
 	ddev->feature_id = feature->id;
 	ddev->revision = feature->revision;
 	ddev->dfh_version = feature->dfh_version;
+	ddev->group_id = feature->group_id;
+	ddev->inst_id = feature->inst_id;
 	ddev->cdev = fdata->dfl_cdev;
+	ddev->gic_arm_ref = feature->gic_arm_ref;
+	ddev->fpga_intr_lines = feature->fpga_intr_lines;
+
 	if (feature->param_size) {
 		ddev->params = kmemdup(feature->params, feature->param_size, GFP_KERNEL);
 		if (!ddev->params) {
@@ -755,13 +800,14 @@ struct build_feature_devs_info {
 	struct dfl_fpga_cdev *cdev;
 	unsigned int nr_irqs;
 	int *irq_table;
-
 	enum dfl_id_type type;
 	void __iomem *ioaddr;
 	resource_size_t start;
 	resource_size_t len;
 	struct list_head sub_features;
 	int feature_num;
+	int gic_arm_ref;
+	int fpga_intr_lines;
 };
 
 /**
@@ -770,7 +816,9 @@ struct build_feature_devs_info {
  * @fid: id of this sub feature.
  * @revision: revision of this sub feature
  * @dfh_version: device feature header version.
- * @guid: guid of this sub feature.
+ * @guid: GUID of this sub feature.
+ * @group_id: specify the group id of the feature.
+ * @inst_id: Instance id of the feature.
  * @mmio_res: mmio resource of this sub feature.
  * @ioaddr: mapped base address of mmio resource.
  * @node: node in sub_features linked list.
@@ -784,11 +832,15 @@ struct dfl_feature_info {
 	u8 revision;
 	u8 dfh_version;
 	guid_t guid;
+	u16 group_id;
+	u16 inst_id;
 	struct resource mmio_res;
 	void __iomem *ioaddr;
 	struct list_head node;
 	unsigned int irq_base;
 	unsigned int nr_irqs;
+	int gic_arm_ref;
+	int fpga_intr_lines;
 	unsigned int param_size;
 	u64 params[];
 };
@@ -845,6 +897,7 @@ binfo_create_feature_dev_data(struct build_feature_devs_info *binfo)
 	fdata->num = binfo->feature_num;
 	fdata->dfl_cdev = binfo->cdev;
 	fdata->id = FEATURE_DEV_ID_UNUSED;
+
 	mutex_init(&fdata->lock);
 	lockdep_set_class_and_name(&fdata->lock, &dfl_pdata_keys[type],
 				   dfl_pdata_key_strings[type]);
@@ -867,6 +920,8 @@ binfo_create_feature_dev_data(struct build_feature_devs_info *binfo)
 		feature->id = finfo->fid;
 		feature->revision = finfo->revision;
 		feature->dfh_version = finfo->dfh_version;
+		feature->gic_arm_ref = finfo->gic_arm_ref;
+		feature->fpga_intr_lines = finfo->fpga_intr_lines;
 
 		if (finfo->param_size) {
 			feature->params = devm_kmemdup(binfo->dev,
@@ -1323,6 +1378,11 @@ create_feature_instance(struct build_feature_devs_info *binfo,
 	finfo->fid = fid;
 	finfo->revision = revision;
 	finfo->dfh_version = dfh_ver;
+	finfo->group_id = dfl_feature_group_id(binfo->ioaddr + ofst);
+	finfo->inst_id = dfl_feature_inst_id(binfo->ioaddr + ofst);
+	finfo->gic_arm_ref = binfo->gic_arm_ref;
+	finfo->fpga_intr_lines = binfo->fpga_intr_lines;
+
 	if (dfh_ver == 1) {
 		v = readq(binfo->ioaddr + ofst + DFHv1_CSR_ADDR);
 		addr_off = FIELD_GET(DFHv1_CSR_ADDR_MASK, v) << 1;
@@ -1350,22 +1410,10 @@ create_feature_instance(struct build_feature_devs_info *binfo,
 
 		guid_l = readq(binfo->ioaddr + ofst + GUID_L);
 		guid_h = readq(binfo->ioaddr + ofst + GUID_H);
+		finfo->guid = dfl_guid_init(guid_h, guid_l);
+		dev_dbg(binfo->dev, "dfl: GUID_H = 0x%llx , GUID_L = 0x%llx\n GUID = %pUL\n",
+			guid_h, guid_l, &finfo->guid);
 
-		if (guid_l || guid_h) {
-			dev_dbg(binfo->dev, "dfl: GUID_H = 0x%llx , GUID_L = 0x%llx\n",
-				guid_h, guid_l);
-			finfo->guid = GUID_INIT(FIELD_GET(DFL_GUID_H_A, guid_h),
-						FIELD_GET(DFL_GUID_H_B, guid_h),
-					FIELD_GET(DFL_GUID_H_C, guid_h),
-					FIELD_GET(DFL_GUID_L_D0, guid_l),
-					FIELD_GET(DFL_GUID_L_D1, guid_l),
-					FIELD_GET(DFL_GUID_L_D2, guid_l),
-					FIELD_GET(DFL_GUID_L_D3, guid_l),
-					FIELD_GET(DFL_GUID_L_D4, guid_l),
-					FIELD_GET(DFL_GUID_L_D5, guid_l),
-					FIELD_GET(DFL_GUID_L_D6, guid_l),
-					FIELD_GET(DFL_GUID_L_D7, guid_l));
-		}
 	} else {
 		start = binfo->start + ofst;
 		end = start + size - 1;
@@ -1772,6 +1820,8 @@ dfl_fpga_feature_devs_enumerate(struct dfl_fpga_enum_info *info)
 	binfo->cdev = cdev;
 	INIT_LIST_HEAD(&binfo->sub_features);
 
+	binfo->gic_arm_ref = info->gic_arm_ref;
+	binfo->fpga_intr_lines = info->fpga_intr_lines;
 	binfo->nr_irqs = info->nr_irqs;
 	if (info->nr_irqs)
 		binfo->irq_table = info->irq_table;

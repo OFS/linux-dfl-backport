@@ -14,20 +14,29 @@
 #include "dfl.h"
 #include "dfl-priv-feat.h"
 
-static ssize_t
-guid_show(struct device *dev, struct device_attribute *attr, char *buf)
+static ssize_t group_id_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct dfl_device *ddev = to_dfl_dev(dev);
-
 	if (!ddev->dfh_version)
 		return -ENOENT;
 
-	return sysfs_emit(buf, "%pUL\n", &ddev->guid);
+	return sysfs_emit(buf, "0x%X\n", ddev->group_id);
 }
-static DEVICE_ATTR_RO(guid);
+static DEVICE_ATTR_RO(group_id);
+
+static ssize_t inst_id_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct dfl_device *ddev = to_dfl_dev(dev);
+	if (!ddev->dfh_version)
+		return -ENOENT;
+
+	return sysfs_emit(buf, "0x%X\n", ddev->inst_id);
+}
+static DEVICE_ATTR_RO(inst_id);
 
 static struct attribute *dfl_priv_feat_attrs[] = {
-	&dev_attr_guid.attr,
+	&dev_attr_group_id.attr,
+	&dev_attr_inst_id.attr,
 	NULL,
 };
 
@@ -129,3 +138,4 @@ module_platform_driver(dfl_priv_feat_driver);
 MODULE_DESCRIPTION("FPGA Privare Feature driver");
 MODULE_AUTHOR("Intel Corporation");
 MODULE_LICENSE("GPL");
+MODULE_ALIAS("platform:dfl-priv-feat");

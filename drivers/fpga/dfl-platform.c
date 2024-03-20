@@ -20,6 +20,10 @@
 
 #define DRV_NAME	"dfl-platform"
 
+#define USER_INTERRUPT_START	32
+#define FPGA_INTERRUPT_START	49
+#define FPGA_INTERRUPT_LINES	64
+
 struct dfl_platform_drvdata {
 	struct dfl_fpga_cdev *cdev;	/* container device */
 };
@@ -35,6 +39,34 @@ static int dfl_platform_init_drvdata(struct platform_device *pdev)
 	platform_set_drvdata(pdev, drvdata);
 
 	return 0;
+}
+
+static void dfl_platform_process_intr_params(struct platform_device *pdev,
+					     struct dfl_fpga_enum_info *info)
+{
+	struct device_node *node = pdev->dev.of_node;
+	int user_intr_start = USER_INTERRUPT_START;
+	int fpga_intr_start = FPGA_INTERRUPT_START;
+	int fpga_intr_lines = FPGA_INTERRUPT_LINES;
+	int reg;
+
+	if (of_property_read_u32(node, "intel,user-interrupt-start", &reg))
+		dev_warn(&pdev->dev, "intel,user-interrupt-start value not set in device tree\n");
+	else
+		user_intr_start = reg;
+
+	if (of_property_read_u32(node, "intel,fpga-interrupt-start", &reg))
+		dev_warn(&pdev->dev, "intel,fpga-interrupt-start not set in device tree\n");
+	else
+		fpga_intr_start = reg;
+
+	if (of_property_read_u32(node, "intel,fpga-interrupt-lines", &reg))
+		dev_warn(&pdev->dev, "intel,interrupt-user-offset value not set in device tree\n");
+	else
+		fpga_intr_lines = reg;
+
+	info->gic_arm_ref = fpga_intr_start - user_intr_start;
+	info->fpga_intr_lines  = fpga_intr_lines;
 }
 
 static void dfl_platform_remove_feature_devs(struct platform_device *pdev)
@@ -67,6 +99,8 @@ static int dfl_platform_process_dfl_node(struct platform_device *pdev,
 		ret = -ENOMEM;
 		goto err_map;
 	}
+
+	dfl_platform_process_intr_params(pdev, info);
 
 	dfl_fpga_enum_info_add_dfl(info, start, len);
 
@@ -112,6 +146,7 @@ info_free_exit:
 
 	return ret;
 }
+
 
 static int dfl_platform_probe(struct platform_device *pdev)
 {
@@ -163,13 +198,13 @@ static int dfl_platform_remove(struct platform_device *pdev)
 
 static const struct of_device_id dfl_platform_match[] = {
 	{ .compatible = "intel,dfl-mmio", },
-	{},
+	{}
 };
 MODULE_DEVICE_TABLE(of, dfl_platform_match);
 
 static const struct platform_device_id dfl_platform_ids[] = {
 	{ DRV_NAME, 0 },
-	{ }
+	{}
 };
 MODULE_DEVICE_TABLE(platform, dfl_platform_ids);
 

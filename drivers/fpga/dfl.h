@@ -239,7 +239,7 @@ int dfl_fpga_check_port_id(struct dfl_feature_dev_data *fdata, void *pport_id);
  * struct dfl_feature_id - dfl private feature id
  *
  * @id: unique dfl private feature id.
- * @guid: unique dfl private guid.
+ * @guid: unique dfl private GUID.
  */
 struct dfl_feature_id {
 	u16 id;
@@ -285,10 +285,12 @@ struct dfl_feature_irq_ctx {
  * @ops: ops of this sub feature.
  * @ddev: ptr to the dfl device of this sub feature.
  * @priv: priv data of this feature.
+ * @guid: sub feature GUID.
  * @dfh_version: version of the DFH
+ * @group_id: specify the group id of the feature.
+ * @inst_id: Instance id of the feature.
  * @param_size: size of dfh parameters
  * @params: point to memory copy of dfh parameters
- * @guid: unique dfl private guid.
  */
 struct dfl_feature {
 	struct platform_device *dev;
@@ -301,10 +303,14 @@ struct dfl_feature {
 	const struct dfl_feature_ops *ops;
 	struct dfl_device *ddev;
 	void *priv;
+	guid_t guid;
 	u8 dfh_version;
+	u16 group_id;
+	u16 inst_id;
+	int gic_arm_ref;
+	int fpga_intr_lines;
 	unsigned int param_size;
 	void *params;
-	guid_t guid;
 };
 
 #define FEATURE_DEV_ID_UNUSED	(-1)
@@ -508,34 +514,41 @@ static inline u8 dfl_feature_revision(void __iomem *base)
 	return (u8)FIELD_GET(DFH_REVISION, readq(base + DFH));
 }
 
-#define DFL_GUID_INVALID \
-	GUID_INIT(0xffffffff, 0xffff, 0xffff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff)
+static inline u16 dfl_feature_inst_id(void __iomem *base)
+{
+	return (u16)FIELD_GET(DFHv1_CSR_SIZE_GRP_INSTANCE_ID, readq(base + DFHv1_CSR_SIZE_GRP));
+}
+
+static inline u16 dfl_feature_group_id(void __iomem *base)
+{
+	return (u16)FIELD_GET(DFHv1_CSR_SIZE_GRP_GROUPING_ID, readq(base + DFHv1_CSR_SIZE_GRP));
+}
+
+#define DFL_GUID_INVALID						\
+	GUID_INIT(0xffffffff, 0xffff, 0xffff,				\
+		  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff)
 
 static inline bool dfl_guid_is_valid(const guid_t *guid)
 {
-	bool ret = true;
-	guid_t *guid_invalid =  &DFL_GUID_INVALID;
+	guid_t *guid_invalid = &DFL_GUID_INVALID;
 
-	if (guid_is_null(guid) || guid_equal(guid, guid_invalid))
-		ret = false;
-	return ret;
+	return !guid_is_null(guid) && !guid_equal(guid, guid_invalid);
 }
 
-/*
- *  Bit definitions masks extract from GUID_H and GUID_L
- *  GUID_INIT(a, b, c, d0, d1, d2, d3, d4, d5, d6, d7)
- */
-#define DFL_GUID_H_A   GENMASK_ULL(63, 32)
-#define DFL_GUID_H_B   GENMASK_ULL(31, 16)
-#define DFL_GUID_H_C   GENMASK_ULL(15, 0)
-#define DFL_GUID_L_D0  GENMASK_ULL(63, 56)
-#define DFL_GUID_L_D1  GENMASK_ULL(55, 48)
-#define DFL_GUID_L_D2  GENMASK_ULL(47, 40)
-#define DFL_GUID_L_D3  GENMASK_ULL(39, 32)
-#define DFL_GUID_L_D4  GENMASK_ULL(31, 24)
-#define DFL_GUID_L_D5  GENMASK_ULL(23, 16)
-#define DFL_GUID_L_D6  GENMASK_ULL(15, 8)
-#define DFL_GUID_L_D7  GENMASK_ULL(7, 0)
+static inline guid_t dfl_guid_init(u64 guid_h, u64 guid_l)
+{
+	return GUID_INIT(FIELD_GET(GENMASK_ULL(63, 32), guid_h),
+			 FIELD_GET(GENMASK_ULL(31, 16), guid_h),
+			 FIELD_GET(GENMASK_ULL(15, 0), guid_h),
+			 FIELD_GET(GENMASK_ULL(63, 56), guid_l),
+			 FIELD_GET(GENMASK_ULL(55, 48), guid_l),
+			 FIELD_GET(GENMASK_ULL(47, 40), guid_l),
+			 FIELD_GET(GENMASK_ULL(39, 32), guid_l),
+			 FIELD_GET(GENMASK_ULL(31, 24), guid_l),
+			 FIELD_GET(GENMASK_ULL(23, 16), guid_l),
+			 FIELD_GET(GENMASK_ULL(15, 8), guid_l),
+			 FIELD_GET(GENMASK_ULL(7, 0), guid_l));
+}
 
 /**
  * struct dfl_fpga_enum_info - DFL FPGA enumeration information
@@ -550,6 +563,8 @@ struct dfl_fpga_enum_info {
 	struct list_head dfls;
 	unsigned int nr_irqs;
 	int *irq_table;
+	int gic_arm_ref;
+	int fpga_intr_lines;
 };
 
 /**

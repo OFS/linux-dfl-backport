@@ -2,10 +2,11 @@
 
 KERNEL ?= $(shell uname -r)
 KERNELDIR ?= /lib/modules/$(KERNEL)/build
+KERNELBUILDDIR ?= $(KERNELDIR)
 LINUXINCLUDE := -I$(src)/include -I$(src)/include/uapi $(LINUXINCLUDE)
 
 # make Kconfig conditionals always work
-include $(KERNELDIR)/.config
+include $(KERNELBUILDDIR)/.config
 
 ifeq ($(DEBUG),1)
 DYNDBG = dyndbg=+p
@@ -47,9 +48,11 @@ endif
 # The module order matters; it determines the module order for
 # both the insmod and rmmod targets. The module order is also
 # leveraged for install packages by the dkms.conf file.
+ifneq ($(CONFIG_FPGA),y)
 obj-m += fpga-mgr.o
 obj-m += fpga-bridge.o
 obj-m += fpga-region.o
+endif
 ifndef CONFIG_FW_UPLOAD
 obj-m += fpga-image-load.o
 endif
@@ -60,6 +63,7 @@ obj-m += dfl-fme-mgr.o
 obj-m += dfl-fme-region.o
 obj-m += dfl-fme-br.o
 obj-m += dfl-priv-feat.o
+obj-m += dfl-branch.o
 obj-m += dfl-hssi.o
 obj-m += dfl-n3000-nios.o
 obj-m += dfl-emif.o
@@ -106,6 +110,7 @@ dfl-fme-y += drivers/fpga/dfl-fme-perf.o
 dfl-fme-y += drivers/fpga/dfl-fme-error.o
 
 dfl-priv-feat-y += drivers/fpga/dfl-priv-feat-main.o
+dfl-branch-y += drivers/fpga/dfl-branch.o
 
 dfl-fme-br-y := drivers/fpga/dfl-fme-br.o
 dfl-fme-mgr-y := drivers/fpga/dfl-fme-mgr.o

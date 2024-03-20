@@ -31,19 +31,19 @@ properties:
       This property establishes a reference to the Interrupt Controller Node,
       which manages interrupts for the device.
 
-  interrupt-user-start:
+  intel,user-interrupt-start:
     maxItems: 1
     description:
       This property defines the initial user interrupts available on the specified
       controller. GIC are reserved for local purposes
 
-  fpga-interrupt-start:
+  intel,fpga-interrupt-start:
     maxItems: 1
     descritpion:
       This property indicates the starting interrupt number within the GIC where
       FPGA-specific interrupts are mapped.
 
-  fpga-interrupt-lines:
+  intel,fpga-interrupt-lines:
     maxItems: 1
     descritpions:
       This property specifies the total count of Interrupt Requests (IRQs)
@@ -61,7 +61,7 @@ examples:
         compatible = "intel,dfl-mmio";
         reg = <0xF9000000  0x00002000>;
         interrupt-parent = <&intc>;
-        interrupt-user-start = <32>;
-        fpga-interrupt-start = <49>;
-        fpga-interrupt-lines = <64>;
+        intel,user-interrupt-start = <32>;
+        intel,fpga-interrupt-start = <49>;
+        intel,fpga-interrupt-lines = <64>;
     };
