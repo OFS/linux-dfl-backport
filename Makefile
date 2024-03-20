@@ -2,10 +2,11 @@
 
 KERNEL ?= $(shell uname -r)
 KERNELDIR ?= /lib/modules/$(KERNEL)/build
+KERNELBUILDDIR ?= $(KERNELDIR)
 LINUXINCLUDE := -I$(src)/include -I$(src)/include/uapi $(LINUXINCLUDE)
 
 # make Kconfig conditionals always work
-include $(KERNELDIR)/.config
+include $(KERNELBUILDDIR)/.config
 
 ifeq ($(DEBUG),1)
 DYNDBG = dyndbg=+p
