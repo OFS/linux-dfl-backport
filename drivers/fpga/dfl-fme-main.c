@@ -696,8 +696,7 @@ static long fme_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 static int fme_dev_init(struct platform_device *pdev)
 {
-	struct dfl_feature_platform_data *pdata = dev_get_platdata(&pdev->dev);
-	struct dfl_feature_dev_data *fdata = pdata->fdata;
+	struct dfl_feature_dev_data *fdata = to_dfl_feature_dev_data(&pdev->dev);
 	struct dfl_fme *fme;
 
 	fme = devm_kzalloc(&pdev->dev, sizeof(*fme), GFP_KERNEL);
@@ -713,8 +712,7 @@ static int fme_dev_init(struct platform_device *pdev)
 
 static void fme_dev_destroy(struct platform_device *pdev)
 {
-	struct dfl_feature_platform_data *pdata = dev_get_platdata(&pdev->dev);
-	struct dfl_feature_dev_data *fdata = pdata->fdata;
+	struct dfl_feature_dev_data *fdata = to_dfl_feature_dev_data(&pdev->dev);
 
 	mutex_lock(&fdata->lock);
 	dfl_fpga_fdata_set_private(fdata, NULL);
