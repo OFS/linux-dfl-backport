@@ -189,7 +189,7 @@ static int dfl_spi_altera_probe(struct dfl_device *dfl_dev)
 
 	return 0;
 exit:
-	spi_master_put(host);
+	spi_controller_put(host);
 	return err;
 }
 
