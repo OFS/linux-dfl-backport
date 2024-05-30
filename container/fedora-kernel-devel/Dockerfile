@@ -2,8 +2,8 @@ ARG tag=rawhide
 FROM fedora:${tag}
 # https://docs.docker.com/engine/reference/builder/#understand-how-arg-and-from-interact
 ARG tag
-RUN yum -y upgrade \
-    && yum -y install \
+RUN dnf -y upgrade \
+    && dnf -y install \
     bc \
     bison \
     ca-certificates \
@@ -25,4 +25,4 @@ RUN yum -y upgrade \
     python3 \
     rpm-build \
     rsync \
-    && yum -y clean all
+    && dnf -y clean all
