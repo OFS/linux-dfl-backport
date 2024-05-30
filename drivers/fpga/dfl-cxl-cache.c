@@ -148,7 +148,7 @@ static int cxl_cache_dma_pin_pages(struct dfl_cxl_cache *cxl_cache,
 	const int npages = PFN_DOWN(region->length);
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 3, 0) && RHEL_RELEASE_CODE < 0x803
-	ret = afu_dma_adjust_locked_vm(cxl_cache->dev, npages, false);
+	ret = afu_dma_adjust_locked_vm(cxl_cache->dev, npages, true);
 #else
 	ret = account_locked_vm(current->mm, npages, true);
 #endif
