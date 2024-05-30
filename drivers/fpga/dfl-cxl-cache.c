@@ -289,13 +289,11 @@ static long cxl_cache_set_region_read_only(struct dfl_cxl_cache *cxl_cache,
 	return -EINVAL;
 #else
 	struct vm_area_struct *vma;
-	long ret = 0;
 
 	vma = vma_lookup(current->mm, region->user_addr);
-	if (IS_ERR(vma)) {
-		ret = PTR_ERR(vma);
-		dev_err(cxl_cache->dev, "vma_lookup() failed: %ld\n", ret);
-		return ret;
+	if (!vma) {
+		dev_err(cxl_cache->dev, "vma_lookup() failed");
+		return -EINVAL;
 	}
 
 	mmap_write_lock(current->mm);
@@ -315,7 +313,7 @@ static long cxl_cache_set_region_read_only(struct dfl_cxl_cache *cxl_cache,
 	/* Flush all remaining cache entries. */
 	drm_clflush_virt_range(page_address(region->pages[0]), region->length);
 
-	return ret;
+	return 0;
 #endif
 }
 
