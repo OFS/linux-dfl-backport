@@ -21,7 +21,7 @@
 #include <linux/module.h>
 #include <linux/stddef.h>
 #include <linux/errno.h>
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0) && RHEL_RELEASE_CODE < 0x904
 #include <linux/aer.h>
 #endif
 
@@ -405,7 +405,7 @@ int cci_pci_probe(struct pci_dev *pcidev, const struct pci_device_id *pcidevid)
 		return ret;
 	}
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0) && RHEL_RELEASE_CODE < 0x904
 	ret = pci_enable_pcie_error_reporting(pcidev);
 	if (ret && ret != -EINVAL)
 		dev_info(&pcidev->dev, "PCIE AER unavailable %d.\n", ret);
@@ -418,7 +418,7 @@ int cci_pci_probe(struct pci_dev *pcidev, const struct pci_device_id *pcidevid)
 		ret = dma_set_mask_and_coherent(&pcidev->dev, DMA_BIT_MASK(32));
 	if (ret) {
 		dev_err(&pcidev->dev, "No suitable DMA support available.\n");
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0) && RHEL_RELEASE_CODE < 0x904
 		pci_disable_pcie_error_reporting(pcidev);
 #endif
 		return ret;
@@ -427,7 +427,7 @@ int cci_pci_probe(struct pci_dev *pcidev, const struct pci_device_id *pcidevid)
 	ret = cci_init_drvdata(pcidev);
 	if (ret) {
 		dev_err(&pcidev->dev, "Fail to init drvdata %d.\n", ret);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0) && RHEL_RELEASE_CODE < 0x904
 		pci_disable_pcie_error_reporting(pcidev);
 #endif
 		return ret;
@@ -436,7 +436,7 @@ int cci_pci_probe(struct pci_dev *pcidev, const struct pci_device_id *pcidevid)
 	ret = cci_enumerate_feature_devs(pcidev);
 	if (ret) {
 		dev_err(&pcidev->dev, "enumeration failure %d.\n", ret);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0) && RHEL_RELEASE_CODE < 0x904
 		pci_disable_pcie_error_reporting(pcidev);
 #endif
 		return ret;
@@ -486,7 +486,7 @@ static void cci_pci_remove(struct pci_dev *pcidev)
 		cci_pci_sriov_configure(pcidev, 0);
 
 	cci_remove_feature_devs(pcidev);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0) && RHEL_RELEASE_CODE < 0x904
 	pci_disable_pcie_error_reporting(pcidev);
 #endif
 }
