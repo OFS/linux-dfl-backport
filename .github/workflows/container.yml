@@ -32,6 +32,9 @@ jobs:
             tag: '39'
           - image: fedora-kernel-devel
             container: fedora-kernel-devel
+            tag: '40'
+          - image: fedora-kernel-devel
+            container: fedora-kernel-devel
             tag: 'rawhide'
           - image: centos-kernel-devel
             container: centos-8-kernel-devel
