@@ -55,7 +55,7 @@ static inline int dev_err_probe(const struct device *dev, int err, const char *f
  * module pointer which never actually did anything and even
  * then should not have been required as a parameter.
  */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 4, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 4, 0) && RHEL_RELEASE_CODE < 0x904
 #undef class_create
 #define class_create(name)				\
 ({							\
