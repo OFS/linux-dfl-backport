@@ -19,9 +19,9 @@ RUN ([[ "${tag}" != 8* ]] || sed -i '/^enabled=/s#0#1#' \
     && ([[ "${tag}" != *.* ]] || sed -i -e '/^mirrorlist/s,^,#,' \
         -e "s,^#\\?\\(baseurl=http://dl.rockylinux.org\\)/\$contentdir/\$releasever/,\\1/vault/rocky/${tag}/," \
         /etc/yum.repos.d/[Rr]ocky*.repo) \
-    && yum -y upgrade \
-    && yum -y install epel-release \
-    && yum -y install \
+    && dnf -y upgrade \
+    && dnf -y install epel-release \
+    && dnf -y install \
     bc \
     bison \
     ca-certificates \
@@ -43,4 +43,4 @@ RUN ([[ "${tag}" != 8* ]] || sed -i '/^enabled=/s#0#1#' \
     python3 \
     rpm-build \
     rsync \
-    && yum -y clean all
+    && dnf -y clean all
