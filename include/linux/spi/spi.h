@@ -11,7 +11,9 @@
 #include <linux/version.h>
 #include_next <linux/spi/spi.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0) &&       \
+	(LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 71) || \
+	 LINUX_VERSION_CODE >= KERNEL_VERSION(6, 2, 0))
 /* spi_get_chipselect() was introduced in commit 303feb3cc06a ("spi: Add APIs
  * in spi core to set/get spi->chip_select and spi->cs_gpiod").
  */
