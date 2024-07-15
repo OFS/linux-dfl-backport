@@ -11,9 +11,9 @@
 #include <linux/version.h>
 #include_next <linux/spi/spi.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 4, 0)
-/* spi_get_chipselect() was introduced in commit 9e264f3f85a5 ("spi: Replace
- * all spi->chip_select and spi->cs_gpiod references with function call").
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
+/* spi_get_chipselect() was introduced in commit 303feb3cc06a ("spi: Add APIs
+ * in spi core to set/get spi->chip_select and spi->cs_gpiod").
  */
 static inline u8 spi_get_chipselect(const struct spi_device *spi, u8 idx)
 {
