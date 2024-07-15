@@ -64,6 +64,9 @@ jobs:
           - image: rockylinux-kernel-devel
             container: rockylinux-8-kernel-devel
             tag: '9.2'
+          - image: debian-kernel-devel
+            container: debian-12-kernel-devel
+            tag: '12'
           - image: ubuntu-kernel-devel
             container: ubuntu-22.04-kernel-devel
             tag: '20.04'
