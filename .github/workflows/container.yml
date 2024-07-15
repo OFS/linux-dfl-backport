@@ -18,6 +18,9 @@ on:
       - '.github/workflows/container.yml'
       - 'container/**'
 
+  schedule:
+    - cron: "11 18 * * 1"
+
   workflow_dispatch:
 
 jobs:

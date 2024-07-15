@@ -23,6 +23,9 @@ on:
       - 'drivers/**'
       - 'include/**'
 
+  schedule:
+    - cron: "33 18 * * 1"
+
   workflow_dispatch:
 
 jobs:
