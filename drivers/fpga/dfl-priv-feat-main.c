@@ -102,7 +102,11 @@ exit:
 	return ret;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 static int dfl_priv_feat_remove(struct platform_device *pdev)
+#else
+static void dfl_priv_feat_remove(struct platform_device *pdev)
+#endif
 {
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0) && RHEL_RELEASE_CODE < 0x803
 	device_remove_groups(&pdev->dev, dfl_priv_feat_dev_groups);
@@ -110,7 +114,9 @@ static int dfl_priv_feat_remove(struct platform_device *pdev)
 	dfl_fpga_dev_feature_uinit(pdev);
 	dfl_priv_feat_dev_destroy(pdev);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 	return 0;
+#endif
 }
 
 static struct platform_driver dfl_priv_feat_driver = {

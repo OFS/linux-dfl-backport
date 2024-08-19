@@ -240,7 +240,11 @@ error_exit:
 	return ret;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 static int m10bmc_log_remove(struct platform_device *pdev)
+#else
+static void m10bmc_log_remove(struct platform_device *pdev)
+#endif
 {
 	struct m10bmc_log *ddata = dev_get_drvdata(&pdev->dev);
 
@@ -248,7 +252,9 @@ static int m10bmc_log_remove(struct platform_device *pdev)
 
 	cancel_delayed_work_sync(&ddata->dwork);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 	return 0;
+#endif
 }
 
 static const struct m10bmc_log_cfg m10bmc_log_n6000_cfg = {

@@ -78,7 +78,11 @@ static int fme_br_probe(struct platform_device *pdev)
 	return 0;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 static int fme_br_remove(struct platform_device *pdev)
+#else
+static void fme_br_remove(struct platform_device *pdev)
+#endif
 {
 	struct fpga_bridge *br = platform_get_drvdata(pdev);
 	struct fme_br_priv *priv = br->priv;
@@ -88,7 +92,9 @@ static int fme_br_remove(struct platform_device *pdev)
 	if (priv->port_ops)
 		dfl_fpga_port_ops_put(priv->port_ops);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 	return 0;
+#endif
 }
 
 static struct platform_driver fme_br_driver = {

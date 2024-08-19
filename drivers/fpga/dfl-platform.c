@@ -155,10 +155,16 @@ static int dfl_platform_probe(struct platform_device *pdev)
 	return ret;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 static int dfl_platform_remove(struct platform_device *pdev)
+#else
+static void dfl_platform_remove(struct platform_device *pdev)
+#endif
 {
 	dfl_platform_remove_feature_devs(pdev);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 	return 0;
+#endif
 }
 
 static const struct of_device_id dfl_platform_match[] = {

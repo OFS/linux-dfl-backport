@@ -530,12 +530,18 @@ static int intel_s10_phy_probe(struct platform_device *pdev)
 #endif
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 static int intel_s10_phy_remove(struct platform_device *pdev)
+#else
+static void intel_s10_phy_remove(struct platform_device *pdev)
+#endif
 {
 	struct hssi_phy *phy = dev_get_drvdata(&pdev->dev);
 
 	mutex_destroy(&phy->lock);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 	return 0;
+#endif
 }
 
 static struct platform_driver intel_s10_phy_driver = {

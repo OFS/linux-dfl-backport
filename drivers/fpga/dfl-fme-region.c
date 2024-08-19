@@ -61,7 +61,11 @@ eprobe_mgr_put:
 	return ret;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 static int fme_region_remove(struct platform_device *pdev)
+#else
+static void fme_region_remove(struct platform_device *pdev)
+#endif
 {
 	struct fpga_region *region = platform_get_drvdata(pdev);
 	struct fpga_manager *mgr = region->mgr;
@@ -69,7 +73,9 @@ static int fme_region_remove(struct platform_device *pdev)
 	fpga_region_unregister(region);
 	fpga_mgr_put(mgr);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 	return 0;
+#endif
 }
 
 static struct platform_driver fme_region_driver = {

@@ -75,7 +75,11 @@ exit:
 	return ret;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 static int qsfp_platform_remove(struct platform_device *pdev)
+#else
+static void qsfp_platform_remove(struct platform_device *pdev)
+#endif
 {
 	struct device *dev = &pdev->dev;
 	struct qsfp *qsfp = dev_get_drvdata(dev);
@@ -85,7 +89,9 @@ static int qsfp_platform_remove(struct platform_device *pdev)
 #endif
 	qsfp_remove_device(qsfp);
 	mutex_destroy(&qsfp->lock);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 	return 0;
+#endif
 }
 
 static const struct of_device_id intel_fpga_qsfp_mem_ids[] = {

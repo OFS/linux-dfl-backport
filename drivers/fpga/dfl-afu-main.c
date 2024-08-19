@@ -1024,7 +1024,11 @@ exit:
 	return ret;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 static int afu_remove(struct platform_device *pdev)
+#else
+static void afu_remove(struct platform_device *pdev)
+#endif
 {
 	dev_dbg(&pdev->dev, "%s\n", __func__);
 
@@ -1032,7 +1036,9 @@ static int afu_remove(struct platform_device *pdev)
 	dfl_fpga_dev_feature_uinit(pdev);
 	afu_dev_destroy(pdev);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 	return 0;
+#endif
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || RHEL_RELEASE_CODE >= 0x803

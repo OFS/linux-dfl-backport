@@ -1664,7 +1664,11 @@ fw_name_fail:
 	return ret;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 static int m10bmc_sec_remove(struct platform_device *pdev)
+#else
+static void m10bmc_sec_remove(struct platform_device *pdev)
+#endif
 {
 	struct m10bmc_sec *sec = dev_get_drvdata(&pdev->dev);
 
@@ -1679,7 +1683,9 @@ static int m10bmc_sec_remove(struct platform_device *pdev)
 	kfree(sec->fw_name);
 	xa_erase(&fw_upload_xa, sec->fw_name_id);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 	return 0;
+#endif
 }
 
 static const struct platform_device_id intel_m10bmc_sec_ids[] = {
