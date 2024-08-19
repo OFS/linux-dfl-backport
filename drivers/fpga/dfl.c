@@ -254,7 +254,11 @@ dfl_match_one_device(const struct dfl_device_id *id, struct dfl_device *ddev)
 	return NULL;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 static int dfl_bus_match(struct device *dev, struct device_driver *drv)
+#else
+static int dfl_bus_match(struct device *dev, const struct device_driver *drv)
+#endif
 {
 	struct dfl_device *ddev = to_dfl_dev(dev);
 	struct dfl_driver *ddrv = to_dfl_drv(drv);
