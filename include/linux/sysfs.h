@@ -4,10 +4,10 @@
 #define BACKPORT_SYSFS_H
 
 #include <linux/version.h>
-#include <linux/mm.h>
 #include_next <linux/sysfs.h>
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 104) || (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 5, 0) && LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0))) && RHEL_RELEASE_CODE < 0x805
+#include <linux/mm.h>
 /**
  *	sysfs_emit - scnprintf equivalent, aware of PAGE_SIZE buffer
  *	@buf:	start of PAGE_SIZE buffer.
