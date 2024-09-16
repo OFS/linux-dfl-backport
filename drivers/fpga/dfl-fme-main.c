@@ -632,7 +632,7 @@ static int fme_open(struct inode *inode, struct file *filp)
 	if (!ret) {
 		dev_dbg(&fdev->dev, "Device File Opened %d Times\n",
 			dfl_feature_dev_use_count(fdata));
-		filp->private_data = pdata;
+		filp->private_data = fdata;
 	}
 	mutex_unlock(&fdata->lock);
 
@@ -641,8 +641,7 @@ static int fme_open(struct inode *inode, struct file *filp)
 
 static int fme_release(struct inode *inode, struct file *filp)
 {
-	struct dfl_feature_platform_data *pdata = filp->private_data;
-	struct dfl_feature_dev_data *fdata = pdata->fdata;
+	struct dfl_feature_dev_data *fdata = filp->private_data;
 	struct platform_device *pdev = fdata->dev;
 	struct dfl_feature *feature;
 
@@ -662,8 +661,7 @@ static int fme_release(struct inode *inode, struct file *filp)
 
 static long fme_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
-	struct dfl_feature_platform_data *pdata = filp->private_data;
-	struct dfl_feature_dev_data *fdata = pdata->fdata;
+	struct dfl_feature_dev_data *fdata = filp->private_data;
 	struct platform_device *pdev = fdata->dev;
 	struct dfl_feature *f;
 	long ret;
