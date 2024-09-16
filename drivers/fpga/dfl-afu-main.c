@@ -145,11 +145,9 @@ static u8 get_port_rev(struct dfl_feature_dev_data *fdata)
 
 static int port_reset(struct platform_device *pdev)
 {
-	struct dfl_feature_dev_data *fdata;
+	struct dfl_feature_dev_data *fdata = to_dfl_feature_dev_data(&pdev->dev);
 	int ret;
 	u8 rev;
-
-	fdata = to_dfl_feature_dev_data(&pdev->dev);
 
 	rev = get_port_rev(fdata);
 
@@ -548,7 +546,6 @@ static umode_t port_afu_attrs_visible(struct kobject *kobj,
 	struct dfl_feature_dev_data *fdata;
 
 	fdata = to_dfl_feature_dev_data(dev);
-
 	/*
 	 * sysfs entries are visible only if related private feature is
 	 * enumerated.
@@ -570,8 +567,7 @@ __ATTRIBUTE_GROUPS(port_afu);
 static int port_afu_init(struct platform_device *pdev,
 			 struct dfl_feature *feature)
 {
-	struct dfl_feature_dev_data *fdata =
-					to_dfl_feature_dev_data(&pdev->dev);
+	struct dfl_feature_dev_data *fdata = to_dfl_feature_dev_data(&pdev->dev);
 	struct resource *res = &pdev->resource[feature->resource_index];
 	int ret;
 
@@ -618,8 +614,7 @@ static const struct dfl_feature_ops port_afu_ops = {
 static int port_stp_init(struct platform_device *pdev,
 			 struct dfl_feature *feature)
 {
-	struct dfl_feature_dev_data *fdata =
-					to_dfl_feature_dev_data(&pdev->dev);
+	struct dfl_feature_dev_data *fdata = to_dfl_feature_dev_data(&pdev->dev);
 	struct resource *res = &pdev->resource[feature->resource_index];
 
 	return afu_mmio_region_add(fdata,
