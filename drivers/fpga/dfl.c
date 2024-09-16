@@ -553,8 +553,7 @@ EXPORT_SYMBOL_GPL(dfl_dev_get_base_dev);
  */
 void dfl_fpga_dev_feature_uinit(struct platform_device *pdev)
 {
-	struct dfl_feature_platform_data *pdata = dev_get_platdata(&pdev->dev);
-	struct dfl_feature_dev_data *fdata = pdata->fdata;
+	struct dfl_feature_dev_data *fdata = to_dfl_feature_dev_data(&pdev->dev);
 	struct dfl_feature *feature;
 
 	dfl_devs_remove(fdata);
@@ -2168,8 +2167,7 @@ long dfl_feature_ioctl_set_irq(struct platform_device *pdev,
 			       struct dfl_feature *feature,
 			       unsigned long arg)
 {
-	struct dfl_feature_platform_data *pdata = dev_get_platdata(&pdev->dev);
-	struct dfl_feature_dev_data *fdata = pdata->fdata;
+	struct dfl_feature_dev_data *fdata = to_dfl_feature_dev_data(&pdev->dev);
 	struct dfl_fpga_irq_set hdr;
 	s32 *fds;
 	long ret;
