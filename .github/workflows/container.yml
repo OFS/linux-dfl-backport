@@ -1,7 +1,8 @@
 name: Build kernel development containers
 
+# https://github.com/ossf/scorecard/blob/9ff40de429d0c7710076070387c8755494a9f187/docs/checks.md#token-permissions
 permissions:
-  packages: write
+  contents: read
 
 on:
   push:
@@ -25,6 +26,9 @@ on:
 
 jobs:
   container:
+    permissions:
+      packages: write
+
     runs-on: ubuntu-latest
 
     strategy:
