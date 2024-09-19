@@ -437,9 +437,9 @@ dfl_fpga_inode_to_feature_dev_data(struct inode *inode)
 	return pdata->fdata;
 }
 
-#define dfl_fpga_dev_for_each_feature(fdata, feature)			    \
-	for ((feature) = (fdata)->features;				    \
-	   (feature) < (fdata)->features + (fdata)->num; (feature)++)
+#define dfl_fpga_dev_for_each_feature(_fdata, _feature)			    \
+	for ((_feature) = (_fdata)->features;				    \
+	   (_feature) < (_fdata)->features + (_fdata)->num; (_feature)++)
 
 static inline struct dfl_feature *
 dfl_get_feature_by_id(struct dfl_feature_dev_data *fdata, u16 id)
