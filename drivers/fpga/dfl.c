@@ -974,15 +974,25 @@ static int feature_dev_register(struct dfl_feature_dev_data *fdata)
 
 err_put_dev:
 	platform_device_put(fdev);
+
 	fdata->dev = NULL;
+
+	dfl_fpga_dev_for_each_feature(fdata, feature)
+		feature->dev = NULL;
 
 	return ret;
 }
 
 static void feature_dev_unregister(struct dfl_feature_dev_data *fdata)
 {
+	struct dfl_feature *feature;
+
 	platform_device_unregister(fdata->dev);
+
 	fdata->dev = NULL;
+
+	dfl_fpga_dev_for_each_feature(fdata, feature)
+		feature->dev = NULL;
 }
 
 static int build_info_commit_dev(struct build_feature_devs_info *binfo)
