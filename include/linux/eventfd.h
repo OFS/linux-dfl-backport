@@ -11,7 +11,7 @@
 #include <linux/version.h>
 #include_next <linux/eventfd.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0) && RHEL_RELEASE_CODE < 0x905
 /* Before commit 3652117f8548 ("eventfd: simplify eventfd_signal()")
  * eventfd_signal() received an extra argument @n that was always 1.
  */
