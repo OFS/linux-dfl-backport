@@ -300,7 +300,7 @@ static long cxl_cache_set_region_read_only(struct dfl_cxl_cache *cxl_cache,
 
 	/* Mark the pages as non-cached and write-protected. */
 	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0) && RHEL_RELEASE_CODE < 0x905
 	vma->vm_flags &= ~VM_WRITE;
 #else
 	vm_flags_clear(vma, VM_WRITE);
