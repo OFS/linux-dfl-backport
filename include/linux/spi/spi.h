@@ -24,4 +24,12 @@ static inline u8 spi_get_chipselect(const struct spi_device *spi, u8 idx)
 }
 #endif
 
+/* spi_alloc_host() and devm_spi_alloc_host() were introduced in commit
+ * b8d3b056a78d ("spi: introduce new helpers with using modern naming").
+ */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0) && RHEL_RELEASE_CODE < 0x905
+#define spi_alloc_host spi_alloc_master
+#define devm_spi_alloc_host devm_spi_alloc_master
+#endif
+
 #endif /* _BACKPORT_LINUX_SPI_SPI_H_ */
