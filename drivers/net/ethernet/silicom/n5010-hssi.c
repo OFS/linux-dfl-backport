@@ -484,7 +484,11 @@ err_unreg_netdev:
 	return err;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 14, 0)
 static int n5010_match_phy_dev(struct device *dev, void *data)
+#else
+static int n5010_match_phy_dev(struct device *dev, const void *data)
+#endif
 {
 	return dev->driver && !strcmp(dev->driver->name, "n5010bmc-phy");
 }
