@@ -2,6 +2,21 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.12.0-2]
+
+This release builds with the Linux distribution kernels shipped with:
+
+- RHEL 8.2 to 8.10, and 9.0 to 9.5.
+- Fedora 40 and 41.
+- Ubuntu 20.04, 22.04, and 24.04.
+
+### Added
+
+- backport: constify call to device_find_child() with Linux 6.14 ([ee6c4df](https://github.com/OFS/linux-dfl-backport/commit/ee6c4dffc34e7e7217a0395c0bd07e0c590316b9)).
+- Updating SECURITY.md ([4d08cb4](https://github.com/OFS/linux-dfl-backport/commit/4d08cb488f6855d7633755169c9171d32ca7bf6b)).
+
+[1.12.0-2]: https://github.com/OFS/linux-dfl-backport/compare/intel-1.12.0-1...intel-1.12.0-2
+
 ## [1.12.0-1]
 
 This release builds with the Linux distribution kernels shipped with:
