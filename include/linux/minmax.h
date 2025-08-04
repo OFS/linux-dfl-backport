@@ -11,7 +11,7 @@
 #include_next <linux/minmax.h>
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 6, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 16, 0) && RHEL_RELEASE_CODE < 0x906
 static inline bool in_range64(u64 val, u64 start, u64 len)
 {
 	return (val - start) < len;
